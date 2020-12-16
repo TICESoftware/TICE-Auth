@@ -1,0 +1,133 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "Cryptor",
+        "repositoryURL": "https://github.com/Kitura/BlueCryptor.git",
+        "state": {
+          "branch": null,
+          "revision": "ee5880e031da4c609f372cf7472476ab51d5dd19",
+          "version": "1.0.200"
+        }
+      },
+      {
+        "package": "CryptorECC",
+        "repositoryURL": "https://github.com/TICESoftware/BlueECC.git",
+        "state": {
+          "branch": null,
+          "revision": "9365709b9db6265262113d4047de42e19d4a0078",
+          "version": "1.2.6"
+        }
+      },
+      {
+        "package": "CryptorRSA",
+        "repositoryURL": "https://github.com/Kitura/BlueRSA.git",
+        "state": {
+          "branch": null,
+          "revision": "c885fcdbe1b04718cb46d747387137653c030f6c",
+          "version": "1.0.200"
+        }
+      },
+      {
+        "package": "DoubleRatchet",
+        "repositoryURL": "https://github.com/TICESoftware/DoubleRatchet.git",
+        "state": {
+          "branch": null,
+          "revision": "6f4d4e10092e196dea2c43f2ef137c9335c580d8",
+          "version": "2.0.1"
+        }
+      },
+      {
+        "package": "HKDF",
+        "repositoryURL": "https://github.com/TICESoftware/HKDF.git",
+        "state": {
+          "branch": null,
+          "revision": "c0512a18f9486af535bac1befe3f7df753c5b206",
+          "version": "1.0.9"
+        }
+      },
+      {
+        "package": "jwt-kit",
+        "repositoryURL": "https://github.com/vapor/jwt-kit.git",
+        "state": {
+          "branch": null,
+          "revision": "6055fe8439769aa3646a3c797d573ce7305849c8",
+          "version": "4.2.0"
+        }
+      },
+      {
+        "package": "KituraContracts",
+        "repositoryURL": "https://github.com/Kitura/KituraContracts.git",
+        "state": {
+          "branch": null,
+          "revision": "8418006e39e2efae9b31ae92721cb597ac29c617",
+          "version": "1.2.200"
+        }
+      },
+      {
+        "package": "LoggerAPI",
+        "repositoryURL": "https://github.com/Kitura/LoggerAPI.git",
+        "state": {
+          "branch": null,
+          "revision": "e82d34eab3f0b05391082b11ea07d3b70d2f65bb",
+          "version": "1.9.200"
+        }
+      },
+      {
+        "package": "swift-crypto",
+        "repositoryURL": "https://github.com/apple/swift-crypto.git",
+        "state": {
+          "branch": null,
+          "revision": "9680b7251cd2be22caaed8f1468bd9e8915a62fb",
+          "version": "1.1.2"
+        }
+      },
+      {
+        "package": "SwiftJWT",
+        "repositoryURL": "https://github.com/TICESoftware/Swift-JWT.git",
+        "state": {
+          "branch": null,
+          "revision": "a22af7ada72d10aef1f27934a4ec7d78b84b214b",
+          "version": "3.6.202"
+        }
+      },
+      {
+        "package": "swift-log",
+        "repositoryURL": "https://github.com/apple/swift-log.git",
+        "state": {
+          "branch": null,
+          "revision": "173f567a2dfec11d74588eea82cecea555bdc0bc",
+          "version": "1.4.0"
+        }
+      },
+      {
+        "package": "Sodium",
+        "repositoryURL": "https://github.com/jedisct1/swift-sodium.git",
+        "state": {
+          "branch": null,
+          "revision": "4f9164a0a2c9a6a7ff53a2833d54a5c79c957342",
+          "version": "0.9.1"
+        }
+      },
+      {
+        "package": "TICEModels",
+        "repositoryURL": "https://github.com/TICESoftware/TICE-SwiftModels.git",
+        "state": {
+          "branch": null,
+          "revision": "8205143e8b381c544ac9a1e8198d8b38dd7a0dc8",
+          "version": "49.0.0"
+        }
+      },
+      {
+        "package": "X3DH",
+        "repositoryURL": "https://github.com/TICESoftware/X3DH.git",
+        "state": {
+          "branch": null,
+          "revision": "47fff98d542da56ef4d53743985c3446e20c956e",
+          "version": "2.0.8"
+        }
+      }
+    ]
+  },
+  "version": 1
+}
