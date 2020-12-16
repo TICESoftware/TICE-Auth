@@ -4,7 +4,7 @@
 
 import Foundation
 import JWTKit
-import TICEModels
+//import TICEModels -> Certificate
 
 public func jwtRSTojwtAsn1(_ jwt: String) throws -> String {
     let jwtComponents = jwt.components(separatedBy: ".")

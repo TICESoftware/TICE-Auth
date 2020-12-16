@@ -1,12 +1,10 @@
 //
-//  Copyright © 2019 Anbion. All rights reserved.
+//  Copyright © 2020 Anbion. All rights reserved.
 //
 
 import Foundation
-import TICEModels
 import JWTKit
-
-public typealias JWTId = UUID
+//import TICEModels -> GroupId, UserId
 
 public struct MembershipClaims: JWTPayload {
     public let jti: JWTId
@@ -28,8 +26,8 @@ public struct MembershipClaims: JWTPayload {
     }
     
     public func validateClaims() throws {
-        try exp?.verifyNotExpired(currentDate: Date().addingTimeInterval(CryptoManager.jwtValidationLeeway))
-        try iat?.verifyIssuedInPast(currentDate: Date().addingTimeInterval(CryptoManager.jwtValidationLeeway))
+        try exp?.verifyNotExpired(currentDate: Date().addingTimeInterval(AuthManager.jwtValidationLeeway))
+        try iat?.verifyIssuedInPast(currentDate: Date().addingTimeInterval(AuthManager.jwtValidationLeeway))
     }
     
     public func verify(using signer: JWTSigner) throws {
