@@ -4,7 +4,6 @@
 
 import Foundation
 import JWTKit
-import Sodium
 import Logging
 
 public enum CryptoManagerError: Error, CustomStringConvertible {
@@ -67,7 +66,6 @@ public class AuthManager {
 
     public static let jwtValidationLeeway: TimeInterval = 5 // KEEP
     public let certificatesValidFor: TimeInterval = 60*60*24*30*12
-    let sodium = Sodium()
     let logger: Logger
 
     public init(logger: Logger) {
@@ -148,11 +146,7 @@ public class AuthManager {
 
     public func generateAuthHeader(signingKey: PrivateKey, userId: UserId) throws -> Certificate {
         let issueDate = Date()
-        guard let randomBytes = sodium.randomBytes.buf(length: 16) else {
-            throw CryptoManagerError.tokenGenerationFailed
-        }
-        
-        let claims = AuthHeaderClaims(iss: userId, iat: issueDate, exp: issueDate.addingTimeInterval(120), nonce: Data(randomBytes))
+        let claims = AuthHeaderClaims(iss: userId, iat: issueDate, exp: issueDate.addingTimeInterval(120), nonce: maybeUnsafeRandomNonce(bytes: 16))
         let jwtSigner = JWTSigner.es512(key: try ECDSAKey.private(pem: signingKey))
         let jwt = try jwtSigner.sign(claims)
         return try jwtRSTojwtAsn1(jwt)
@@ -173,5 +167,11 @@ public class AuthManager {
         } catch {
             return false
         }
+    }
+    
+    public func maybeUnsafeRandomNonce(bytes: Int) -> Data {
+        var array: [UInt8] = .init(repeating: 0, count: bytes)
+        (0..<bytes).forEach { array[$0] = UInt8.random(in: UInt8.min ... UInt8.max) }
+        return Data(array)
     }
 }
