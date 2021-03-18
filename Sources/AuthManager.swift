@@ -94,24 +94,16 @@ public class AuthManager {
         return try jwtRSTojwtAsn1(jwt)
     }
 
-    public func validateUserSignedMembershipCertificate(certificate: Certificate, membership: Membership, issuerUserId: UserId, issuerPublicSigningKey: PublicKey) throws {
-        try validate(certificate: certificate, membership: membership, issuer: .user(issuerUserId), publicKey: issuerPublicSigningKey)
-    }
-
-    public func validateServerSignedMembershipCertificate(certificate: Certificate, membership: Membership, publicKey: PublicKey) throws {
-        try validate(certificate: certificate, membership: membership, issuer: .server, publicKey: publicKey)
-    }
-
-    private func validate(certificate: Certificate, membership: Membership, issuer: MembershipClaims.Issuer, publicKey: PublicKey) throws {
+    private func validate(certificate: Certificate, userId: UserId, groupId: GroupId, admin: Bool, issuer: MembershipClaims.Issuer, publicKey: PublicKey) throws {
         let signer = try JWTSigner.es512(key: .public(pem: publicKey))
         let jwt = signatureType(of: certificate) == .rs ? certificate : try jwtAsn1TojwtRS(certificate)
         
         do {
             let claims = try signer.verify(jwt, as: MembershipClaims.self)
             try claims.validateClaims()
-            guard claims.groupId == membership.groupId,
-                claims.sub == membership.userId,
-                (!membership.admin || claims.admin) else {
+            guard claims.groupId == groupId,
+                claims.sub == userId,
+                (!admin || claims.admin) else {
                 throw CryptoManagerError.certificateValidationFailed(CertificateValidationError.invalidMembership)
             }
 
