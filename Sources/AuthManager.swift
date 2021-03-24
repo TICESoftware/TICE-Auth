@@ -75,19 +75,19 @@ public class AuthManager {
     // MARK: Membership certificates
 
     public func createUserSignedMembershipCertificate(userId: UserId, groupId: GroupId, admin: Bool, signerUserId: UserId, signerPrivateSigningKey: PrivateKey) throws -> Certificate {
-        return try createMembershipCertificate(jwtId: UUID(), userId: userId, groupId: groupId, admin: admin, issuer: .user(signerUserId), signingKey: signerPrivateSigningKey)
+        return try createMembershipCertificate(jwtId: UUID(), userId: userId, groupId: groupId, admin: admin, issuer: .user(signerUserId), signingKey: try ECDSAKey.private(pem: signerPrivateSigningKey))
     }
 
-    public func createServerSignedMembershipCertificate(jwtId: JWTId = UUID(), userId: UserId, groupId: GroupId, admin: Bool, signingKey: PrivateKey) throws -> Certificate {
+    public func createServerSignedMembershipCertificate(jwtId: JWTId = UUID(), userId: UserId, groupId: GroupId, admin: Bool, signingKey: ECDSAKey) throws -> Certificate {
         return try createMembershipCertificate(jwtId: jwtId, userId: userId, groupId: groupId, admin: admin, issuer: .server, signingKey: signingKey)
     }
 
-    private func createMembershipCertificate(jwtId: JWTId, userId: UserId, groupId: GroupId, admin: Bool, issuer: MembershipClaims.Issuer, signingKey: PrivateKey) throws -> Certificate {
+    private func createMembershipCertificate(jwtId: JWTId, userId: UserId, groupId: GroupId, admin: Bool, issuer: MembershipClaims.Issuer, signingKey: ECDSAKey) throws -> Certificate {
         let issueDate = Date()
         
         let claims = MembershipClaims(jti: jwtId, iss: issuer, sub: userId, iat: issueDate, exp: issueDate.addingTimeInterval(certificatesValidFor), groupId: groupId, admin: admin)
         
-        let jwtSigner = JWTSigner.es512(key: try ECDSAKey.private(pem: signingKey))
+        let jwtSigner = JWTSigner.es512(key: signingKey)
         let jwt = try jwtSigner.sign(claims)
         return try jwtRSTojwtAsn1(jwt)
     }
@@ -145,9 +145,13 @@ public class AuthManager {
     // MARK: Auth signature
 
     public func generateAuthHeader(signingKey: PrivateKey, userId: UserId) throws -> Certificate {
+        return try generateAuthHeader(signingKey: try ECDSAKey.private(pem: signingKey), userId: userId)
+    }
+
+    public func generateAuthHeader(signingKey: ECDSAKey, userId: UserId) throws -> Certificate {
         let issueDate = Date()
         let claims = AuthHeaderClaims(iss: userId, iat: issueDate, exp: issueDate.addingTimeInterval(120), nonce: maybeUnsafeRandomNonce(bytes: 16))
-        let jwtSigner = JWTSigner.es512(key: try ECDSAKey.private(pem: signingKey))
+        let jwtSigner = JWTSigner.es512(key: signingKey)
         let jwt = try jwtSigner.sign(claims)
         return try jwtRSTojwtAsn1(jwt)
     }
