@@ -8,7 +8,7 @@ import JWTKit
 
 public func jwtRSTojwtAsn1(_ jwt: String) throws -> String {
     let jwtComponents = jwt.components(separatedBy: ".")
-    guard jwtComponents.count == 3 else { throw CryptoManagerError.tokenGenerationFailed }
+    guard jwtComponents.count == 3 else { throw CertificateCreationError.tokenGenerationFailed }
 
     let signatureData = data(base64urlEncoded: jwtComponents[2])!
     let asn1SignatureData = try rsSigToASN1(signatureData)
@@ -18,7 +18,7 @@ public func jwtRSTojwtAsn1(_ jwt: String) throws -> String {
 
 public func jwtAsn1TojwtRS(_ jwt: String) throws -> String {
     let jwtComponents = jwt.components(separatedBy: ".")
-    guard jwtComponents.count == 3 else { throw CryptoManagerError.tokenGenerationFailed }
+    guard jwtComponents.count == 3 else { throw CertificateCreationError.tokenGenerationFailed }
     let signatureData = data(base64urlEncoded: jwtComponents[2])!
     let rsSignatureData = try asn1ToRSSig(asn1: signatureData)
     let rsSignature = base64urlEncodedString(data: rsSignatureData)
@@ -50,7 +50,7 @@ public func signatureType(of jwt: Certificate) -> JWTSignatureType {
     }
 }
 
-// MARK:- Data+Base64URLEncoded
+// MARK: Data+Base64URLEncoded
 
 // Source: https://github.com/Kitura/Swift-JWT/blob/master/Sources/SwiftJWT/Data%2BBase64URLEncoded.swift
 

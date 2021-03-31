@@ -18,7 +18,7 @@ import Foundation
  * limitations under the License.
  **/
 
-struct ASN1 {
+enum ASN1 {
 
     indirect enum ASN1Element {
         case seq(elements: [ASN1Element])
@@ -63,7 +63,6 @@ struct ASN1 {
             // number is too large to fit in Int; return the bytes
             return (.bytes(data: data.subdata(in: (1 + lengthOfLength) ..< (1 + lengthOfLength + length))), 1 + lengthOfLength + length)
 
-
         case let s where (s & 0xe0) == 0xa0: // constructed
             let tag = Int(s & 0x1f)
             let (length, lengthOfLength) = readLength(data: data.advanced(by: 1))
@@ -77,7 +76,7 @@ struct ASN1 {
         }
     }
 
-    static private func readLength(data: Data) -> (Int, Int) {
+    private static func readLength(data: Data) -> (Int, Int) {
         if data[0] & 0x80 == 0x00 { // short form
             return (Int(data[0]), 1)
         } else {
@@ -110,16 +109,16 @@ struct ASN1 {
 
 func rsSigToASN1(_ rs: Data) throws -> Data {
     let count = rs.count
+    // swiftlint:disable:next empty_count
     guard count != 0 && count % 2 == 0 else {
-        // The error was replaced
-        throw CryptoManagerError.certificateValidationFailed(CertificateValidationError.invalidSignature)
+        throw CertificateValidationError.invalidSignature
     }
 
     let r = Data(rs[..<(count / 2)])
     let s = Data(rs[(count / 2)...])
     
     guard r.count == s.count, r.count == 32 || r.count == 48 || r.count == 66 else {
-        throw CryptoManagerError.tokenGenerationFailed
+        throw CertificateCreationError.tokenGenerationFailed
     }
     // Convert r,s signature to ASN1 for SecKeyVerifySignature
     var asnSignature = Data()
@@ -180,19 +179,19 @@ func asn1ToRSSig(asn1: Data) throws -> Data {
         case let ASN1.ASN1Element.bytes(data: rData) = seq[0],
         case let ASN1.ASN1Element.bytes(data: sData) = seq[1]
     else {
-        throw CryptoManagerError.tokenGenerationFailed
+        throw CertificateCreationError.tokenGenerationFailed
     }
     // ASN adds 00 bytes in front of negative Int to mark it as positive.
     // These must be removed to make r,a a valid EC signature
     let trimmedRData: Data
     let trimmedSData: Data
-    let rExtra = rData.count - signatureLength/2
+    let rExtra = rData.count - signatureLength / 2
     if rExtra < 0 {
         trimmedRData = Data(count: -rExtra) + rData
     } else {
         trimmedRData = rData.dropFirst(rExtra)
     }
-    let sExtra = sData.count - signatureLength/2
+    let sExtra = sData.count - signatureLength / 2
     if sExtra < 0 {
         trimmedSData = Data(count: -sExtra) + sData
     } else {
