@@ -54,7 +54,6 @@ Fc6LyAXYX5nxaq4rNjY=
         try! ECDSAKey.private(pem: privateKey)
     }
     
-    
     // MARK: Certificates
     
     func testMembershipCertificateValidation() throws {
@@ -108,26 +107,42 @@ Fc6LyAXYX5nxaq4rNjY=
     
     func testValidateExpiredCertificate() throws {
         // Signed by user
-        let userCert = try createMembershipCertificate(userId: userId, groupId: groupId, admin: true, issuer: .user(adminUserId), iat: Date().advanced(by: -3600.0), exp: Date().advanced(by: -10.0), signingKey: privateECDSAKey)
+        let expiredUserCert = try createMembershipCertificate(userId: userId, groupId: groupId, admin: true, issuer: .user(adminUserId), iat: Date().advanced(by: -3600.0), exp: Date().advanced(by: -70.0), signingKey: privateECDSAKey)
         
-        XCTAssertThrowsSpecificError(try authManager.validateUserSignedMembershipCertificate(certificate: userCert, userId: userId, groupId: groupId, admin: true, signerUserId: adminUserId, publicKey: publicKey), CertificateValidationError.expired)
+        XCTAssertThrowsSpecificError(try authManager.validateUserSignedMembershipCertificate(certificate: expiredUserCert, userId: userId, groupId: groupId, admin: true, signerUserId: adminUserId, publicKey: publicKey), CertificateValidationError.expired)
         
+        let expiredUserCertWithLeeway = try createMembershipCertificate(userId: userId, groupId: groupId, admin: true, issuer: .user(adminUserId), iat: Date().advanced(by: -3600.0), exp: Date().advanced(by: -50.0), signingKey: privateECDSAKey)
+        
+        try authManager.validateUserSignedMembershipCertificate(certificate: expiredUserCertWithLeeway, userId: userId, groupId: groupId, admin: true, signerUserId: adminUserId, publicKey: publicKey)
+
         // Signed by server
-        let serverCert = try createMembershipCertificate(userId: userId, groupId: groupId, admin: true, issuer: .server, iat: Date().advanced(by: -3600.0), exp: Date().advanced(by: -10.0), signingKey: privateECDSAKey)
+        let expiredServerCert = try createMembershipCertificate(userId: userId, groupId: groupId, admin: true, issuer: .server, iat: Date().advanced(by: -3600.0), exp: Date().advanced(by: -70.0), signingKey: privateECDSAKey)
         
-        XCTAssertThrowsSpecificError(try authManager.validateUserSignedMembershipCertificate(certificate: serverCert, userId: userId, groupId: groupId, admin: true, signerUserId: adminUserId, publicKey: publicKey), CertificateValidationError.expired)
+        XCTAssertThrowsSpecificError(try authManager.validateServerSignedMembershipCertificate(certificate: expiredServerCert, userId: userId, groupId: groupId, admin: true, publicKey: publicKey), CertificateValidationError.expired)
+        
+        let expiredServerCertWithLeeway = try createMembershipCertificate(userId: userId, groupId: groupId, admin: true, issuer: .server, iat: Date().advanced(by: -3600.0), exp: Date().advanced(by: -50.0), signingKey: privateECDSAKey)
+        
+        try authManager.validateServerSignedMembershipCertificate(certificate: expiredServerCertWithLeeway, userId: userId, groupId: groupId, admin: true, publicKey: publicKey)
     }
     
     func testValidateCertificateIssuedInFuture() throws {
         // Signed by user
-        let userCert = try createMembershipCertificate(userId: userId, groupId: groupId, admin: true, issuer: .user(adminUserId), iat: Date().advanced(by: 10.0), exp: Date().advanced(by: 3600.0), signingKey: privateECDSAKey)
+        let userCertIssuedInFuture = try createMembershipCertificate(userId: userId, groupId: groupId, admin: true, issuer: .user(adminUserId), iat: Date().advanced(by: 70.0), exp: Date().advanced(by: 3600.0), signingKey: privateECDSAKey)
         
-        XCTAssertThrowsSpecificError(try authManager.validateUserSignedMembershipCertificate(certificate: userCert, userId: userId, groupId: groupId, admin: true, signerUserId: adminUserId, publicKey: publicKey), CertificateValidationError.issuedInFuture)
+        XCTAssertThrowsSpecificError(try authManager.validateUserSignedMembershipCertificate(certificate: userCertIssuedInFuture, userId: userId, groupId: groupId, admin: true, signerUserId: adminUserId, publicKey: publicKey), CertificateValidationError.issuedInFuture)
+        
+        let userCertIssuedInFutureWithLeeway = try createMembershipCertificate(userId: userId, groupId: groupId, admin: true, issuer: .user(adminUserId), iat: Date().advanced(by: 50.0), exp: Date().advanced(by: 3600.0), signingKey: privateECDSAKey)
+        
+        try authManager.validateUserSignedMembershipCertificate(certificate: userCertIssuedInFutureWithLeeway, userId: userId, groupId: groupId, admin: true, signerUserId: adminUserId, publicKey: publicKey)
         
         // Signed by server
-        let serverCert = try createMembershipCertificate(userId: userId, groupId: groupId, admin: true, issuer: .server, iat: Date().advanced(by: 10.0), exp: Date().advanced(by: 3600.0), signingKey: privateECDSAKey)
+        let serverCertIssuedInFuture = try createMembershipCertificate(userId: userId, groupId: groupId, admin: true, issuer: .server, iat: Date().advanced(by: 70.0), exp: Date().advanced(by: 3600.0), signingKey: privateECDSAKey)
         
-        XCTAssertThrowsSpecificError(try authManager.validateUserSignedMembershipCertificate(certificate: serverCert, userId: userId, groupId: groupId, admin: true, signerUserId: adminUserId, publicKey: publicKey), CertificateValidationError.issuedInFuture)
+        XCTAssertThrowsSpecificError(try authManager.validateServerSignedMembershipCertificate(certificate: serverCertIssuedInFuture, userId: userId, groupId: groupId, admin: true, publicKey: publicKey), CertificateValidationError.issuedInFuture)
+        
+        let serverCertIssuedInFutureWithLeeway = try createMembershipCertificate(userId: userId, groupId: groupId, admin: true, issuer: .server, iat: Date().advanced(by: 50.0), exp: Date().advanced(by: 3600.0), signingKey: privateECDSAKey)
+        
+        try authManager.validateServerSignedMembershipCertificate(certificate: serverCertIssuedInFutureWithLeeway, userId: userId, groupId: groupId, admin: true, publicKey: publicKey)
     }
     
     func testRemainingValidityTime() throws {
@@ -174,18 +189,28 @@ Fc6LyAXYX5nxaq4rNjY=
     
     func testExpiredAuthHeader() throws {
         let nonce = Data([UInt8](repeating: 0, count: 16))
-        let claims = AuthHeaderClaims(iss: userId, iat: Date().advanced(by: -200), exp: Date().advanced(by: -120), nonce: nonce)
+        let claims = AuthHeaderClaims(iss: userId, iat: Date().advanced(by: -200), exp: Date().advanced(by: -70), nonce: nonce)
         let authHeader = try createASN1Certificate(claims: claims, signingKey: privateECDSAKey)
         
         XCTAssertFalse(authManager.verify(authHeader: authHeader, publicKey: publicKey))
+        
+        let claimsWithLeeway = AuthHeaderClaims(iss: userId, iat: Date().advanced(by: -200), exp: Date().advanced(by: -50), nonce: nonce)
+        let authHeaderWithLeeway = try createASN1Certificate(claims: claimsWithLeeway, signingKey: privateECDSAKey)
+        
+        XCTAssertTrue(authManager.verify(authHeader: authHeaderWithLeeway, publicKey: publicKey))
     }
     
     func testAuthHeaderIssuedInFuture() throws {
         let nonce = Data([UInt8](repeating: 0, count: 16))
-        let claims = AuthHeaderClaims(iss: userId, iat: Date().advanced(by: 10), exp: Date().advanced(by: 200), nonce: nonce)
+        let claims = AuthHeaderClaims(iss: userId, iat: Date().advanced(by: 70), exp: Date().advanced(by: 200), nonce: nonce)
         let authHeader = try createASN1Certificate(claims: claims, signingKey: privateECDSAKey)
         
         XCTAssertFalse(authManager.verify(authHeader: authHeader, publicKey: publicKey))
+        
+        let claimsWithLeeway = AuthHeaderClaims(iss: userId, iat: Date().advanced(by: 50), exp: Date().advanced(by: 200), nonce: nonce)
+        let authHeaderWithLeeway = try createASN1Certificate(claims: claimsWithLeeway, signingKey: privateECDSAKey)
+        
+        XCTAssertTrue(authManager.verify(authHeader: authHeaderWithLeeway, publicKey: publicKey))
     }
     
     func testAuthHeaderInvalidSignature() throws {
@@ -213,7 +238,7 @@ extension XCTestCase {
     func XCTAssertThrowsSpecificError<E: Error & Equatable>(_ expression: @autoclosure () throws -> Void, _ expectedError: E, _ message: @autoclosure () -> String = "", file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertThrowsError(try expression(), message(), file: file, line: line) { error in
             guard error as? E == expectedError else {
-                XCTFail("Unexpected error: \(error). Expected \(expectedError)")
+                XCTFail("Unexpected error: \(error). Expected: \(expectedError)")
                 return
             }
         }

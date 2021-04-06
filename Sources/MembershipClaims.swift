@@ -26,7 +26,7 @@ public struct MembershipClaims: JWTPayload {
     }
     
     public func validateClaims() throws {
-        try exp?.verifyNotExpired(currentDate: Date().addingTimeInterval(AuthManager.jwtValidationLeeway))
+        try exp?.verifyNotExpired(currentDate: Date().addingTimeInterval(-AuthManager.jwtValidationLeeway))
         try iat?.verifyIssuedInPast(currentDate: Date().addingTimeInterval(AuthManager.jwtValidationLeeway))
     }
     
