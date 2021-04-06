@@ -1,5 +1,3 @@
-default: dev
-
 clean:
 	swift package clean
 	swift package reset

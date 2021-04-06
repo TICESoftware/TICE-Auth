@@ -12,7 +12,7 @@ import Logging
 
 public class AuthManager {
 
-    public static let jwtValidationLeeway: TimeInterval = 5 // KEEP
+    public static let jwtValidationLeeway: TimeInterval = 60
     public let certificatesValidFor: TimeInterval = 60 * 60 * 24 * 30 * 12
     let logger: Logger
 
