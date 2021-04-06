@@ -5,7 +5,7 @@
 import Foundation
 import JWTKit
 
-func jwtRSTojwtAsn1(_ jwt: String) throws -> String {
+public func jwtRSTojwtAsn1(_ jwt: String) throws -> String {
     let jwtComponents = jwt.components(separatedBy: ".")
     guard jwtComponents.count == 3 else { throw CertificateCreationError.tokenGenerationFailed }
 
@@ -15,7 +15,7 @@ func jwtRSTojwtAsn1(_ jwt: String) throws -> String {
     return "\(jwtComponents[0]).\(jwtComponents[1]).\(asn1Signature)"
 }
 
-func jwtAsn1TojwtRS(_ jwt: String) throws -> String {
+public func jwtAsn1TojwtRS(_ jwt: String) throws -> String {
     let jwtComponents = jwt.components(separatedBy: ".")
     guard jwtComponents.count == 3 else { throw CertificateCreationError.tokenGenerationFailed }
     let signatureData = data(base64urlEncoded: jwtComponents[2])!
@@ -24,7 +24,7 @@ func jwtAsn1TojwtRS(_ jwt: String) throws -> String {
     return "\(jwtComponents[0]).\(jwtComponents[1]).\(rsSignature)"
 }
 
-func jwtPayload<Payload>(_ jwt: String, as payload: Payload.Type) throws -> Payload where Payload: JWTPayload {
+public func jwtPayload<Payload>(_ jwt: String, as payload: Payload.Type) throws -> Payload where Payload: JWTPayload {
     let jwtComponents = jwt.components(separatedBy: ".")
     guard jwtComponents.count == 3, let payloadData = data(base64urlEncoded: jwtComponents[1]) else {
         throw JWTError.malformedToken
@@ -36,12 +36,12 @@ func jwtPayload<Payload>(_ jwt: String, as payload: Payload.Type) throws -> Payl
     return try jsonDecoder.decode(Payload.self, from: payloadData)
 }
 
-enum JWTSignatureType {
+public enum JWTSignatureType {
     case asn1
     case rs
 }
 
-func signatureType(of jwt: Certificate) -> JWTSignatureType {
+public func signatureType(of jwt: Certificate) -> JWTSignatureType {
     if let signature = jwt.components(separatedBy: ".").last, signature.count > 178 {
         return .asn1
     } else {
@@ -49,7 +49,7 @@ func signatureType(of jwt: Certificate) -> JWTSignatureType {
     }
 }
 
-// MARK: Data+Base64URLEncoded
+// MARK: - Data+Base64URLEncoded
 
 // Source: https://github.com/Kitura/Swift-JWT/blob/master/Sources/SwiftJWT/Data%2BBase64URLEncoded.swift
 

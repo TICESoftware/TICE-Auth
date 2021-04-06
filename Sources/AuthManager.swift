@@ -6,10 +6,6 @@ import Foundation
 import JWTKit
 import Logging
 
-//public enum AuthenticationError: Error, CustomStringConvertible {
-//    case
-//}
-
 public class AuthManager {
 
     public static let jwtValidationLeeway: TimeInterval = 60
