@@ -1,7 +1,7 @@
 import XCTest
 
-import CryptoTests
+import TICEAuthTests
 
 var tests = [XCTestCaseEntry]()
-tests += CryptoTests.allTests()
+tests += TICEAuthTests.allTests()
 XCTMain(tests)

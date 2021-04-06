@@ -1,521 +1,244 @@
-//import XCTest
-//import SwiftJWT
-//import JWTKit
-//import CryptorECC
-//import DoubleRatchet
-//import X3DH
-//import Logging
-//import Sodium
-//@testable import TICEModels
-//@testable import TICECrypto
-//
-//final class CryptoTests: XCTestCase {
-//
-//    lazy var logger: Logger = { Logger(label: "software.tice.TICECrypto.tests", factory: TestLogHandler.init) }()
-//    
-//    lazy var cryptoManager = { CryptoManager(cryptoStore: TestCryptoStore(), encoder: JSONEncoder(), decoder: JSONDecoder(), logger: logger) }()
-//    let groupId = UUID(uuidString: "E621E1F8-C36C-495A-93FC-0C247A3E6E5F")!
-//    let userId = UUID(uuidString: "F621E1F8-C36C-495A-93FC-0C247A3E6E5F")!
-//
-//    lazy var user: TestUser = { TestUser(userId: userId) }()
-//    lazy var membership: Membership = { Membership(userId: self.userId, publicSigningKey: self.user.publicSigningKey, groupId: self.groupId, admin: true, serverSignedMembershipCertificate: "serverSignedCertificate") }()
-//
-//    func testUserSignedMembershipCertificate() throws {
-//        let certificate = try cryptoManager.createUserSignedMembershipCertificate(userId: userId, groupId: groupId, admin: true, signerUserId: userId, signer: user)
-//        try cryptoManager.validateUserSignedMembershipCertificate(certificate: certificate, membership: membership, issuer: user)
-//    }
-//
-//    func testServerSignedMembershipCertificate() throws {
-//        let signingPrivateKey = try ECPrivateKey.make(for: .secp521r1)
-//        let signingPrivateKeyBytes = signingPrivateKey.pemString.bytes
-//
-//        let signingPublicKey = try signingPrivateKey.extractPublicKey()
-//        let signingPublicKeyBytes = signingPublicKey.pemString.bytes
-//
-//        let certificate = try cryptoManager.createServerSignedMembershipCertificate(userId: userId, groupId: groupId, admin: true, signingKey: Data(signingPrivateKeyBytes))
-//
-//        try cryptoManager.validateServerSignedMembershipCertificate(certificate: certificate, membership: membership, publicKey: Data(signingPublicKeyBytes))
-//    }
-//
-//    func testValidateMembershipCertificateInvalidMembership() throws {
-//        let fakeId = UUID(uuidString: "A621E1F8-C36C-495A-93FC-0C247A3E6E5F")!
-//
-//        let certificateInvalidGroupId = try cryptoManager.createUserSignedMembershipCertificate(userId: userId, groupId: fakeId, admin: true, signerUserId: userId, signer: user)
-//        let certificateInvalidUserId = try cryptoManager.createUserSignedMembershipCertificate(userId: fakeId, groupId: groupId, admin: true, signerUserId: fakeId, signer: user)
-//        let certificateInvalidAdminFlag = try cryptoManager.createUserSignedMembershipCertificate(userId: userId, groupId: groupId, admin: false, signerUserId: userId, signer: user)
-//
-//        do {
-//            try cryptoManager.validateUserSignedMembershipCertificate(certificate: certificateInvalidGroupId, membership: membership, issuer: user)
-//            XCTFail("Validation should not have succeeded.")
-//        } catch {
-//            guard case CryptoManagerError.certificateValidationFailed(let certificateValidationError) = error,
-//                case CertificateValidationError.invalidMembership = certificateValidationError else {
-//                XCTFail("Invalid error type (expected invalid membership): \(error.localizedDescription)")
-//                return
-//            }
-//        }
-//
-//        do {
-//            try cryptoManager.validateUserSignedMembershipCertificate(certificate: certificateInvalidUserId, membership: membership, issuer: user)
-//            XCTFail("Validation should not have succeeded.")
-//        } catch {
-//            guard case CryptoManagerError.certificateValidationFailed(let certificateValidationError) = error,
-//                case CertificateValidationError.invalidMembership = certificateValidationError else {
-//                    XCTFail("Invalid error type (expected invalid membership): \(error.localizedDescription)")
-//                    return
-//            }
-//        }
-//
-//        do {
-//            try cryptoManager.validateUserSignedMembershipCertificate(certificate: certificateInvalidAdminFlag, membership: membership, issuer: user)
-//            XCTFail("Validation should not have succeeded.")
-//        } catch {
-//            guard case CryptoManagerError.certificateValidationFailed(let certificateValidationError) = error,
-//                case CertificateValidationError.invalidMembership = certificateValidationError else {
-//                    XCTFail("Invalid error type (expected invalid membership): \(error.localizedDescription)")
-//                    return
-//            }
-//        }
-//    }
-//
-//    func testValidateExpiredCertificate() throws {
-//        let claims = MembershipClaims(jti: JWTId(), iss: .user(userId), sub: userId, iat: Date().addingTimeInterval(-20), exp: Date().addingTimeInterval(-10), groupId: groupId, admin: true)
-//        
-//        let privateKeyData = Data(user.privateSigningKey)
-//        let jwtSigner = JWTKit.JWTSigner.es512(key: try ECDSAKey.private(pem: privateKeyData))
-//        let jwt = try jwtSigner.sign(claims)
-//        let certificate = try jwtRSTojwtAsn1(jwt)
-//
-//        do {
-//            try cryptoManager.validateUserSignedMembershipCertificate(certificate: certificate, membership: membership, issuer: user)
-//            XCTFail("Validation should not have succeeded.")
-//        } catch {
-//            guard case CryptoManagerError.certificateValidationFailed(let certificateValidationError) = error,
-//                case CertificateValidationError.expired(let validateClaimsResult) = certificateValidationError,
-//                validateClaimsResult == "expired" else {
-//                    XCTFail("Invalid error type (expected invalid claims): \(error.localizedDescription)")
-//                    return
-//            }
-//        }
-//    }
-//
-//    func testValidateCertificateIssuedInFuture() throws {
-//        let claims = MembershipClaims(jti: JWTId(), iss: .user(userId), sub: userId, iat: Date().addingTimeInterval(60), exp: Date().addingTimeInterval(3600), groupId: groupId, admin: true)
-//        
-//        let privateKeyData = Data(user.privateSigningKey)
-//        let jwtSigner = JWTKit.JWTSigner.es512(key: try ECDSAKey.private(pem: privateKeyData))
-//        let jwt = try jwtSigner.sign(claims)
-//        let certificate = try jwtRSTojwtAsn1(jwt)
-//
-//        do {
-//            try cryptoManager.validateUserSignedMembershipCertificate(certificate: certificate, membership: membership, issuer: user)
-//            XCTFail("Validation should not have succeeded.")
-//        } catch {
-//            guard case CryptoManagerError.certificateValidationFailed(let certificateValidationError) = error,
-//                case CertificateValidationError.expired(let validateClaimsResult) = certificateValidationError,
-//                validateClaimsResult == "issued in future" else {
-//                    XCTFail("Invalid error type (expected invalid claims): \(error.localizedDescription)")
-//                    return
-//            }
-//        }
-//    }
-//
-//    func testValidateCertificateInvalidSignature() throws {
-//        let claims = MembershipClaims(jti: JWTId(), iss: .user(userId), sub: userId, iat: Date().addingTimeInterval(60), exp: Date().addingTimeInterval(3600), groupId: groupId, admin: true)
-//        
-//        guard let privateKeyData = try ECPrivateKey.make(for: .secp521r1).pemString.data(using: .utf8) else {
-//            XCTFail("Could not create private key")
-//            return
-//        }
-//        
-//        let jwtSigner = JWTKit.JWTSigner.es512(key: try ECDSAKey.private(pem: privateKeyData))
-//        let jwt = try jwtSigner.sign(claims)
-//        let certificate = try jwtRSTojwtAsn1(jwt)
-//
-//        do {
-//            try cryptoManager.validateUserSignedMembershipCertificate(certificate: certificate, membership: membership, issuer: user)
-//            XCTFail("Validation should not have succeeded.")
-//        } catch {
-//            guard case CryptoManagerError.certificateValidationFailed(let certificateValidationError) = error,
-//                case CertificateValidationError.invalidSignature = certificateValidationError else {
-//                XCTFail("Invalid error type (expected invalid signature): \(error.localizedDescription)")
-//                return
-//            }
-//        }
-//    }
-//    
-//    func testOldAuthHeaderClaimsVerifiedByNewMethod() throws {
-//        let issueDate = Date()
-//        let sodium = Sodium()
-//        let privateKey = try ECPrivateKey.make(for: .secp521r1)
-//        guard let privateKeyData = privateKey.pemString.data(using: .utf8) else {
-//            XCTFail("Could not create private key")
-//            return
-//        }
-//        
-//        guard let randomBytes = sodium.randomBytes.buf(length: 16) else { throw CryptoManagerError.tokenGenerationFailed }
-//        let claims = SwiftJWTAuthHeaderClaims(iss: userId, iat: issueDate, exp: issueDate.addingTimeInterval(120), nonce: Data(randomBytes))
-//        var jwt = JWT(claims: claims)
-//
-//        let jwtSigner = JWTSigner.es512(privateKey: privateKeyData, signatureType: .asn1)
-//        let swiftJwtAuthHeader = try jwt.sign(using: jwtSigner)
-//        XCTAssertTrue(cryptoManager.verify(authHeader: swiftJwtAuthHeader, publicKey: try privateKey.extractPublicKey().pemString.data(using: .utf8)!))
-//    }
-//    
-//    func testNewAuthHeaderClaimsVerifiedByOldMethod() throws {
-//        let privateKey = try ECPrivateKey.make(for: .secp521r1)
-//        guard let privateKeyData = privateKey.pemString.data(using: .utf8) else {
-//            XCTFail("Could not create private key")
-//            return
-//        }
-//        
-//        let authHeader = try cryptoManager.generateAuthHeader(signingKey: privateKeyData, userId: UserId())
-//        
-//        let jwtVerifier = SwiftJWT.JWTVerifier.es512(publicKey: try privateKey.extractPublicKey().pemString.data(using: .utf8)!, signatureType: .asn1)
-//        XCTAssertTrue(JWT<SwiftJWTAuthHeaderClaims>.verify(authHeader, using: jwtVerifier))
-//    }
-//    
-//    func testAuthHeaderClaims() throws {
-//        let privateKey = try ECPrivateKey.make(for: .secp521r1)
-//        guard let privateKeyData = privateKey.pemString.data(using: .utf8) else {
-//            XCTFail("Could not create private key")
-//            return
-//        }
-//                
-//        let authHeader = try cryptoManager.generateAuthHeader(signingKey: privateKeyData, userId: UserId())
-//        XCTAssertTrue(cryptoManager.verify(authHeader: authHeader, publicKey: try privateKey.extractPublicKey().pemString.data(using: .utf8)!))
-//    }
-//
-//    func testValidateCertificateDeprecatedIssuerFormat() throws {
-//        struct DeprecatedMembershipClaims: Claims {
-//            public let jti: JWTId
-//            public let iss: DeprecatedIssuer
-//            public let sub: UserId
-//            public let iat: Date?
-//            public let exp: Date?
-//            public let groupId: GroupId
-//            public let admin: Bool
-//
-//            public enum DeprecatedIssuer: Codable {
-//                case server
-//                case user(UserId)
-//
-//                public enum CodingKeys: String, CodingKey {
-//                    case server
-//                    case user
-//                }
-//
-//                public init(from decoder: Decoder) throws {
-//                    XCTFail("Should not have been called")
-//                    throw NSError()
-//                }
-//
-//                public func encode(to encoder: Encoder) throws {
-//                    var container = encoder.container(keyedBy: CodingKeys.self)
-//                    switch self {
-//                    case .server:
-//                        try container.encode("server", forKey: .server)
-//                    case .user(let userId):
-//                        try container.encode(userId, forKey: .user)
-//                    }
-//                }
-//            }
-//        }
-//
-//        let signingPrivateKey = try ECPrivateKey.make(for: .secp521r1)
-//        let signingPrivateKeyBytes = signingPrivateKey.pemString.bytes
-//
-//        let signingPublicKey = try signingPrivateKey.extractPublicKey()
-//        let signingPublicKeyBytes = signingPublicKey.pemString.bytes
-//
-//        let privateKeyData = Data(signingPrivateKeyBytes)
-//        let jwtSigner = JWTSigner.es512(privateKey: privateKeyData, signatureType: .asn1)
-//
-//        let serverClaims = DeprecatedMembershipClaims(jti: JWTId(), iss: DeprecatedMembershipClaims.DeprecatedIssuer.server, sub: userId, iat: Date().addingTimeInterval(-10), exp: Date().addingTimeInterval(10), groupId: groupId, admin: true)
-//        var serverJwt = JWT(claims: serverClaims)
-//        let serverCertificate = try serverJwt.sign(using: jwtSigner)
-//
-//        try cryptoManager.validateServerSignedMembershipCertificate(certificate: serverCertificate, membership: membership, publicKey: Data(signingPublicKeyBytes))
-//
-//        let userClaims = DeprecatedMembershipClaims(jti: JWTId(), iss: DeprecatedMembershipClaims.DeprecatedIssuer.user(userId), sub: userId, iat: Date().addingTimeInterval(-10), exp: Date().addingTimeInterval(10), groupId: groupId, admin: true)
-//        var userJwt = JWT(claims: userClaims)
-//        let userCertificate = try userJwt.sign(using: jwtSigner)
-//
-//        let user = User(userId: userId, publicSigningKey: Data(signingPublicKeyBytes), publicName: nil)
-//        try cryptoManager.validateUserSignedMembershipCertificate(certificate: userCertificate, membership: membership, issuer: user)
-//    }
-//    
-//    func testRemainingValidityTime() throws {
-//        let signingPrivateKey = try ECPrivateKey.make(for: .secp521r1)
-//        let signingPrivateKeyBytes = signingPrivateKey.pemString.bytes
-//
-//        let certificate = try cryptoManager.createServerSignedMembershipCertificate(userId: userId, groupId: groupId, admin: true, signingKey: Data(signingPrivateKeyBytes))
-//        
-//        let remainingValidityTime = try cryptoManager.remainingValidityTime(certificate: certificate)
-//        
-//        XCTAssertEqual(remainingValidityTime, 60*60*24*30*12, accuracy: 5.0)
-//    }
-//
-//    func testInitializeConversation() throws {
-//        let publicKeyMaterial = try cryptoManager.generateHandshakeKeyMaterial(signer: user)
-//
-//        // Publish public key material...
-//
-//        let bob = TestUser(userId: UserId())
-//        let bobsCryptoManager = CryptoManager(cryptoStore: TestCryptoStore(), encoder: JSONEncoder(), decoder: JSONDecoder(), logger: logger)
-//        _ = try bobsCryptoManager.generateHandshakeKeyMaterial(signer: bob)
-//
-//        // Bob gets prekey bundle and remote verification key from server
-//
-//        let conversationId = ConversationId()
-//        let invitation = try bobsCryptoManager.initConversation(with: userId, conversationId: conversationId, remoteIdentityKey: publicKeyMaterial.identityKey, remoteSignedPrekey: publicKeyMaterial.signedPrekey, remotePrekeySignature: publicKeyMaterial.prekeySignature, remoteOneTimePrekey: publicKeyMaterial.oneTimePrekeys.first!, remoteSigningKey: user.publicSigningKey)
-//
-//        // Invitation is transmitted...
-//
-//        try cryptoManager.processConversationInvitation(invitation, from: bob.userId, conversationId: conversationId)
-//
-//        let firstMessagePayload = "Hello!".data(using: .utf8)!
-//        let firstMessage = try bobsCryptoManager.encrypt(firstMessagePayload, for: userId, conversationId: conversationId)
-//
-//        let plaintextData = try cryptoManager.decrypt(encryptedMessage: firstMessage, from: bob.userId, conversationId: conversationId)
-//
-//        XCTAssertEqual(firstMessagePayload, plaintextData, "Invalid decrypted plaintext")
-//    }
-//
-//    func testMaxSkipExceeded() throws {
-//        let bob = TestUser(userId: UserId())
-//        let bobsCryptoManager = CryptoManager(cryptoStore: TestCryptoStore(), encoder: JSONEncoder(), decoder: JSONDecoder(), logger: logger)
-//        _ = try bobsCryptoManager.generateHandshakeKeyMaterial(signer: bob)
-//
-//        let handshakeInfo = try cryptoManager.generateHandshakeKeyMaterial(signer: user)
-//        let conversationId = ConversationId()
-//        let invitation = try bobsCryptoManager.initConversation(with: user.userId, conversationId: conversationId, remoteIdentityKey: handshakeInfo.identityKey, remoteSignedPrekey: handshakeInfo.signedPrekey, remotePrekeySignature: handshakeInfo.prekeySignature, remoteOneTimePrekey: handshakeInfo.oneTimePrekeys.last!, remoteSigningKey: user.publicSigningKey)
-//
-//        try cryptoManager.processConversationInvitation(invitation, from: bob.userId, conversationId: conversationId)
-//
-//        // Produce maxSkip messages that will get lost
-//        for _ in 0...5000 {
-//            _ = try bobsCryptoManager.encrypt(Data(), for: userId, conversationId: conversationId)
-//        }
-//
-//        // Produce another message that is going to be delivered successfully
-//        var encryptedMessage = try bobsCryptoManager.encrypt(Data(), for: userId, conversationId: conversationId)
-//
-//        let exp1 = expectation(description: "maxSkipExceeded error raised")
-//        do {
-//            _ = try cryptoManager.decrypt(encryptedMessage: encryptedMessage, from: bob.userId, conversationId: conversationId)
-//        } catch CryptoManagerError.maxSkipExceeded {
-//            exp1.fulfill()
-//        }
-//
-//        wait(for: [exp1], timeout: 1.0)
-//
-//        //
-//        // BEGIN: Show that ratchet step isn't going to resolve the problem
-//        //
-//        let exp2 = expectation(description: "maxSkipExceeded error raised second time")
-//        encryptedMessage = try cryptoManager.encrypt(Data(), for: bob.userId, conversationId: conversationId)
-//        _ = try bobsCryptoManager.decrypt(encryptedMessage: encryptedMessage, from: user.userId, conversationId: conversationId)
-//
-//        encryptedMessage = try bobsCryptoManager.encrypt(Data(), for: userId, conversationId: conversationId)
-//        do {
-//            _ = try cryptoManager.decrypt(encryptedMessage: encryptedMessage, from: bob.userId, conversationId: conversationId)
-//        } catch CryptoManagerError.maxSkipExceeded {
-//            exp2.fulfill()
-//        }
-//        wait(for: [exp2], timeout: 1.0)
-//        //
-//        // END
-//        //
-//
-//        // Recover by reinitializing conversation
-//        let newHandshakeInfo = try bobsCryptoManager.generateHandshakeKeyMaterial(signer: bob)
-//        let newInvitation = try cryptoManager.initConversation(with: bob.userId, conversationId: conversationId, remoteIdentityKey: newHandshakeInfo.identityKey, remoteSignedPrekey: newHandshakeInfo.signedPrekey, remotePrekeySignature: newHandshakeInfo.prekeySignature, remoteOneTimePrekey: newHandshakeInfo.oneTimePrekeys.last!, remoteSigningKey: bob.publicSigningKey)
-//
-//        try bobsCryptoManager.processConversationInvitation(newInvitation, from: user.userId, conversationId: conversationId)
-//        encryptedMessage = try cryptoManager.encrypt(Data(), for: bob.userId, conversationId: conversationId)
-//        _ = try bobsCryptoManager.decrypt(encryptedMessage: encryptedMessage, from: user.userId, conversationId: conversationId)
-//
-//        encryptedMessage = try bobsCryptoManager.encrypt(Data(), for: user.userId, conversationId: conversationId)
-//        _ = try cryptoManager.decrypt(encryptedMessage: encryptedMessage, from: bob.userId, conversationId: conversationId)
-//    }
-//    
-//    func testLeadingMultipleNullBytesInRSSignature() throws {
-//        let rsJWTToken = "eyJhbGciOiJFUzUxMiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2MDY3MzY5ODguNTc2ODA4OSwibm9uY2UiOiJ2dFVjVmFuVnByMER1TnNOTWxrNVN3PT0iLCJpc3MiOiIwRjA0RUQ4MC0wRTVBLTQwRjgtQUU0NS03Nzg4OUI0NkRDNEIiLCJpYXQiOjE2MDY3MzY4NjguNTc2ODA4OX0.AFEESKRpYY5zIgIDROtfTkvFcoEal_VlNimm5ofN8fudvAsYsfxXqStZc2kjctPlLoDGGtcJThKtlAs_A-BMwukoAABu7l-J58y77RC64iFoqu0uvlXghLKjWpKSBvC2y8_PaYaE2sDtBPaO32gzeczzdwEii_2AS2JmJfhbFxPM3dNM"
-//        let publicKey = """
-//        -----BEGIN PUBLIC KEY-----
-//        MIGbMBAGByqGSM49AgEGBSuBBAAjA4GGAAQAUv0xnZNJSXFcSCtKB0Js/UlMIpx1
-//        k9n3LjQRzFccYv4Qa5qL2uZbxugcDy6ute6lHklfOtHYfrHD/PuRrlTcGtYBQsoO
-//        P7ugG1Ykzg3jJE0GauGbhX5B+6ROElPYhtbG3uQn5u+51YXaHJpy+3DEbH7EuA6s
-//        4zQLF3AZJZwEAwVZF0I=
-//        -----END PUBLIC KEY-----
-//        """
-//        
-//        let signer = try JWTSigner.es512(key: .public(pem: publicKey))
-//        
-//        let asn1Token = try jwtRSTojwtAsn1(rsJWTToken)
-//        let rsToken = try jwtAsn1TojwtRS(asn1Token)
-//        
-//        _ = try signer.verify(rsToken, as: EmptyPayloadClaims.self)
-//    }
-//    
-//    func testGenerateMemberships() throws {
-//        let testUser = TestUser(userId: UserId())
-//        let loops = 100
-//        for _ in 0..<loops {
-//            let authHeader = try cryptoManager.generateAuthHeader(signingKey: testUser.privateSigningKey, userId: testUser.userId)
-//            let verified = cryptoManager.verify(authHeader: authHeader, publicKey: testUser.publicSigningKey)
-//            XCTAssertTrue(verified)
-//        }
-//    }
-//    
-//    func testLinuxTestSuiteIncludesAllTests() {
-//        #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
-//        let thisClass = type(of: self)
-//        let linux = thisClass.allTests
-//        let darwin = thisClass.defaultTestSuite.tests
-//        let linuxNames = Set(linux.map { return "-[\(thisClass) \($0.0)]" })
-//        let darwinNames = Set(darwin.map(\.name))
-//        let missing = darwinNames.subtracting(linuxNames)
-//        XCTAssertEqual(missing.count, 0, "\(missing.count) tests are missing from allTests, namely: \n \(missing)")
-//        #endif
-//    }
-//
-//    static var allTests = [
-//        ("testUserSignedMembershipCertificate", testUserSignedMembershipCertificate),
-//        ("testServerSignedMembershipCertificate", testServerSignedMembershipCertificate),
-//        ("testValidateMembershipCertificateInvalidMembership", testValidateMembershipCertificateInvalidMembership),
-//        ("testValidateExpiredCertificate", testValidateExpiredCertificate),
-//        ("testValidateCertificateIssuedInFuture", testValidateCertificateIssuedInFuture),
-//        ("testValidateCertificateInvalidSignature", testValidateCertificateInvalidSignature),
-//        ("testOldAuthHeaderClaimsVerifiedByNewMethod", testOldAuthHeaderClaimsVerifiedByNewMethod),
-//        ("testNewAuthHeaderClaimsVerifiedByOldMethod", testNewAuthHeaderClaimsVerifiedByOldMethod),
-//        ("testAuthHeaderClaims", testAuthHeaderClaims),
-//        ("testValidateCertificateDeprecatedIssuerFormat", testValidateCertificateDeprecatedIssuerFormat),
-//        ("testRemainingValidityTime", testRemainingValidityTime),
-//        ("testInitializeConversation", testInitializeConversation),
-//        ("testMaxSkipExceeded", testMaxSkipExceeded),
-//        ("testGenerateMemberships", testGenerateMemberships),
-//        ("testLeadingMultipleNullBytesInRSSignature", testLeadingMultipleNullBytesInRSSignature),
-//        ("testLinuxTestSuiteIncludesAllTests", testLinuxTestSuiteIncludesAllTests),
-//    ]
-//}
-//
-//class TestUser: User, Signer {
-//    let privateSigningKey: PrivateKey
-//
-//    init(userId: UserId) {
-//        let signingKey = try! ECPrivateKey.make(for: .secp521r1)
-//        self.privateSigningKey = Data(signingKey.pemString.bytes)
-//
-//        let publicSigningKey = try! signingKey.extractPublicKey().pemString.bytes
-//        super.init(userId: userId, publicSigningKey: Data(publicSigningKey), publicName: nil)
-//    }
-//
-//    required init(from decoder: Decoder) throws {
-//        fatalError("init(from:) has not been implemented")
-//    }
-//}
-//
-//enum TestCryptoStoreError: Error {
-//    case noKeys
-//}
-//
-//class TestCryptoStore: CryptoStore {
-//    var identityKeyPair: TICEModels.KeyPair?
-//    var prekeyPair: TICEModels.KeyPair?
-//    var prekeySignature: Signature?
-//    var oneTimePrekeyPairs: [TICEModels.PublicKey: TICEModels.KeyPair] = [:]
-//
-//    func saveIdentityKeyPair(_ keyPair: TICEModels.KeyPair) throws {
-//        identityKeyPair = keyPair
-//    }
-//
-//    func savePrekeyPair(_ keyPair: TICEModels.KeyPair, signature: Signature) throws {
-//        prekeyPair = keyPair
-//        prekeySignature = signature
-//    }
-//
-//    func saveOneTimePrekeyPairs(_ keyPairs: [TICEModels.KeyPair]) throws {
-//        for keyPair in keyPairs {
-//            oneTimePrekeyPairs[keyPair.publicKey] = keyPair
-//        }
-//    }
-//
-//    func loadIdentityKeyPair() throws -> TICEModels.KeyPair {
-//        guard let identityKeyPair = identityKeyPair else {
-//            throw TestCryptoStoreError.noKeys
-//        }
-//        return identityKeyPair
-//    }
-//
-//    func loadPrekeyPair() throws -> TICEModels.KeyPair {
-//        guard let prekeyPair = prekeyPair else {
-//            throw TestCryptoStoreError.noKeys
-//        }
-//        return prekeyPair
-//    }
-//
-//    func loadPrekeySignature() throws -> Signature {
-//        guard let signature = prekeySignature else {
-//            throw TestCryptoStoreError.noKeys
-//        }
-//        return signature
-//    }
-//
-//    func loadPrivateOneTimePrekey(publicKey: TICEModels.PublicKey) throws -> PrivateKey {
-//        guard let keyPair = oneTimePrekeyPairs[publicKey] else {
-//            throw TestCryptoStoreError.noKeys
-//        }
-//        return keyPair.privateKey
-//    }
-//
-//    func deleteOneTimePrekeyPair(publicKey: TICEModels.PublicKey) throws {
-//        oneTimePrekeyPairs.removeValue(forKey: publicKey)
-//    }
-//
-//    func save(_ conversationState: ConversationState) throws {
-//    }
-//
-//    func loadConversationState(userId: UserId, conversationId: ConversationId) throws -> ConversationState? {
-//        nil
-//    }
-//
-//    func loadConversationStates() throws -> [ConversationState] {
-//        []
-//    }
-//}
-//
-//struct TestLogHandler: LogHandler {
-//    var metadata: Logger.Metadata = [:]
-//    var logLevel: Logger.Level = .trace
-//    let identifier: String
-//    
-//    init(identifier: String) {
-//        self.identifier = identifier
-//    }
-//    
-//    subscript(metadataKey metadataKey: String) -> Logger.Metadata.Value? {
-//        get {
-//            metadata[metadataKey]
-//        }
-//        set(newValue) {
-//            metadata[metadataKey] = newValue
-//        }
-//    }
-//    
-//    func log(level: Logger.Level, message: Logger.Message, metadata: Logger.Metadata?, file: String, function: String, line: UInt) {
-//        print("TEST log: \(level) \(message) \(file) \(function) \(line)")
-//    }
-//}
-//
-//struct SwiftJWTAuthHeaderClaims: Claims {
-//    public let iss: UserId
-//    public let iat: Date?
-//    public let exp: Date?
-//    public let nonce: Data
-//}
-//
-//struct EmptyPayloadClaims: JWTPayload {
-//    func verify(using signer: JWTKit.JWTSigner) throws {}
-//}
+import XCTest
+import Logging
+import JWTKit
+
+@testable import TICEAuth
+
+class TICEAuthTests: XCTestCase {
+    let authManager = AuthManager(logger: Logger(label: "software.tice.TICECrypto.tests", factory: TestLogHandler.init))
+    
+    let groupId = UUID(uuidString: "C621E1F8-C36C-495A-93FC-0C247A3E6E5F")!
+    let userId = UUID(uuidString: "D621E1F8-C36C-495A-93FC-0C247A3E6E5F")!
+    let adminUserId = UUID(uuidString: "E621E1F8-C36C-495A-93FC-0C247A3E6E5F")!
+    let randomUUID = UUID(uuidString: "F621E1F8-C36C-495A-93FC-0C247A3E6E5F")!
+    
+    let privateKey = """
+-----BEGIN EC PRIVATE KEY-----
+MIHcAgEBBEIAgHEAuA8gfGnNUqYGYo2QgShxhd6MFxfig/o0KKPq9MScpf8/AMxv
+kVS5sJxCW2K7lnSs8aynlXcQrfAmt4ybfoOgBwYFK4EEACOhgYkDgYYABAAVumr0
+A4m3key2NeSJQ9f5ykPpOCSd3lJ54PW7cmV9a5jkRJx+65asndU/4Hk4IoiZ8GXa
+fndDggKDYPfg3VvzTADhw9XTa2G6LP3ubZI0jWM4MnT1AeU1CqFtzukXGHCAAhtM
+tldpHfIHDhRsa3tH9WSkL7EdbH2bWifefkxpiEBM9w==
+-----END EC PRIVATE KEY-----
+""".data(using: .utf8)!
+    
+    let publicKey = """
+-----BEGIN PUBLIC KEY-----
+MIGbMBAGByqGSM49AgEGBSuBBAAjA4GGAAQAFbpq9AOJt5HstjXkiUPX+cpD6Tgk
+nd5SeeD1u3JlfWuY5EScfuuWrJ3VP+B5OCKImfBl2n53Q4ICg2D34N1b80wA4cPV
+02thuiz97m2SNI1jODJ09QHlNQqhbc7pFxhwgAIbTLZXaR3yBw4UbGt7R/VkpC+x
+HWx9m1on3n5MaYhATPc=
+-----END PUBLIC KEY-----
+""".data(using: .utf8)!
+    
+    let otherPrivateKey = """
+-----BEGIN EC PRIVATE KEY-----
+MIHcAgEBBEIAgEcmhFfsbLq89YPUVvd6iE/5AUm7DhWLCSsbE8eV2jLK/fUhkpjc
+uH1IOuxyVordJZ8J2zadS2090RZNKWnLwXmgBwYFK4EEACOhgYkDgYYABACOapxD
+mLxAqA71aKSwQFeuk7wuWv5Y9kK+0fH1DMQQQth5RiGuXwXU6dZeDlBV4rHTebK7
+ikwHwjVUL9zfXfFDhAHRMQJLMlND2hZZmQ3a98Zcvg6WVIAnl4jzs9p6FliyB6ok
+1rOCKQowwe1POP7qefUs5u0VzovIBdhfmfFqris2Ng==
+-----END EC PRIVATE KEY-----
+""".data(using: .utf8)!
+    
+    let otherPublicKey = """
+-----BEGIN PUBLIC KEY-----
+MIGbMBAGByqGSM49AgEGBSuBBAAjA4GGAAQAjmqcQ5i8QKgO9WiksEBXrpO8Llr+
+WPZCvtHx9QzEEELYeUYhrl8F1OnWXg5QVeKx03myu4pMB8I1VC/c313xQ4QB0TEC
+SzJTQ9oWWZkN2vfGXL4OllSAJ5eI87PaehZYsgeqJNazgikKMMHtTzj+6nn1LObt
+Fc6LyAXYX5nxaq4rNjY=
+-----END PUBLIC KEY-----
+""".data(using: .utf8)!
+    
+    var privateECDSAKey: ECDSAKey {
+        try! ECDSAKey.private(pem: privateKey)
+    }
+    
+    
+    // MARK: Certificates
+    
+    func testMembershipCertificateValidation() throws {
+        let userCert = try authManager.createUserSignedMembershipCertificate(userId: userId, groupId: groupId, admin: true, signerUserId: adminUserId, signerPrivateSigningKey: privateKey)
+        let serverCert = try authManager.createServerSignedMembershipCertificate(userId: userId, groupId: groupId, admin: true, signingKey: privateECDSAKey)
+        
+        try authManager.validateUserSignedMembershipCertificate(certificate: userCert, userId: userId, groupId: groupId, admin: true, signerUserId: adminUserId, publicKey: publicKey)
+        try authManager.validateServerSignedMembershipCertificate(certificate: serverCert, userId: userId, groupId: groupId, admin: true, publicKey: publicKey)
+    }
+    
+    func testCheckMembershipOnCertificateValidation() throws {
+        // Signed by user
+        let userCert = try authManager.createUserSignedMembershipCertificate(userId: userId, groupId: groupId, admin: true, signerUserId: adminUserId, signerPrivateSigningKey: privateKey)
+        
+        XCTAssertThrowsSpecificError(try authManager.validateUserSignedMembershipCertificate(certificate: userCert, userId: randomUUID, groupId: groupId, admin: true, signerUserId: adminUserId, publicKey: publicKey), CertificateValidationError.invalidMembership)
+        XCTAssertThrowsSpecificError(try authManager.validateUserSignedMembershipCertificate(certificate: userCert, userId: userId, groupId: randomUUID, admin: true, signerUserId: adminUserId, publicKey: publicKey), CertificateValidationError.invalidMembership)
+        
+        // Signed by server
+        let serverCert = try authManager.createServerSignedMembershipCertificate(userId: userId, groupId: groupId, admin: true, signingKey: privateECDSAKey)
+        
+        XCTAssertThrowsSpecificError(try authManager.validateServerSignedMembershipCertificate(certificate: serverCert, userId: randomUUID, groupId: groupId, admin: true, publicKey: publicKey), CertificateValidationError.invalidMembership)
+        XCTAssertThrowsSpecificError(try authManager.validateServerSignedMembershipCertificate(certificate: serverCert, userId: userId, groupId: randomUUID, admin: true, publicKey: publicKey), CertificateValidationError.invalidMembership)
+    }
+    
+    func testCheckAdminFlagOnCertificateValidation() throws {
+        // Signed by user
+        let userCertAdmin = try authManager.createUserSignedMembershipCertificate(userId: userId, groupId: groupId, admin: true, signerUserId: adminUserId, signerPrivateSigningKey: privateKey)
+        try authManager.validateUserSignedMembershipCertificate(certificate: userCertAdmin, userId: userId, groupId: groupId, admin: false, signerUserId: adminUserId, publicKey: publicKey)
+        
+        let userCertNonAdmin = try authManager.createUserSignedMembershipCertificate(userId: userId, groupId: groupId, admin: false, signerUserId: adminUserId, signerPrivateSigningKey: privateKey)
+        try authManager.validateUserSignedMembershipCertificate(certificate: userCertNonAdmin, userId: userId, groupId: groupId, admin: false, signerUserId: adminUserId, publicKey: publicKey)
+        XCTAssertThrowsSpecificError(try authManager.validateUserSignedMembershipCertificate(certificate: userCertNonAdmin, userId: userId, groupId: randomUUID, admin: true, signerUserId: adminUserId, publicKey: publicKey), CertificateValidationError.invalidMembership)
+        
+        // Signed by server
+        let serverCertNonAdmin = try authManager.createServerSignedMembershipCertificate(userId: userId, groupId: groupId, admin: false, signingKey: privateECDSAKey)
+        try authManager.validateServerSignedMembershipCertificate(certificate: serverCertNonAdmin, userId: userId, groupId: groupId, admin: false, publicKey: publicKey)
+        XCTAssertThrowsSpecificError(try authManager.validateServerSignedMembershipCertificate(certificate: serverCertNonAdmin, userId: userId, groupId: groupId, admin: true, publicKey: publicKey), CertificateValidationError.invalidMembership)
+    }
+    
+    func testCheckSignerOnCertificateValidation() throws {
+        // Signed by user
+        let userCert = try authManager.createUserSignedMembershipCertificate(userId: userId, groupId: groupId, admin: true, signerUserId: adminUserId, signerPrivateSigningKey: privateKey)
+        
+        XCTAssertThrowsSpecificError(try authManager.validateUserSignedMembershipCertificate(certificate: userCert, userId: userId, groupId: groupId, admin: true, signerUserId: randomUUID, publicKey: publicKey), CertificateValidationError.invalidClaims)
+        XCTAssertThrowsSpecificError(try authManager.validateServerSignedMembershipCertificate(certificate: userCert, userId: userId, groupId: groupId, admin: true, publicKey: publicKey), CertificateValidationError.invalidClaims)
+        
+        // Signed by server
+        let serverCert = try authManager.createServerSignedMembershipCertificate(userId: userId, groupId: groupId, admin: true, signingKey: privateECDSAKey)
+        XCTAssertThrowsSpecificError(try authManager.validateUserSignedMembershipCertificate(certificate: serverCert, userId: userId, groupId: groupId, admin: true, signerUserId: adminUserId, publicKey: publicKey), CertificateValidationError.invalidClaims)
+    }
+    
+    func testValidateExpiredCertificate() throws {
+        // Signed by user
+        let userCert = try createMembershipCertificate(userId: userId, groupId: groupId, admin: true, issuer: .user(adminUserId), iat: Date().advanced(by: -3600.0), exp: Date().advanced(by: -10.0), signingKey: privateECDSAKey)
+        
+        XCTAssertThrowsSpecificError(try authManager.validateUserSignedMembershipCertificate(certificate: userCert, userId: userId, groupId: groupId, admin: true, signerUserId: adminUserId, publicKey: publicKey), CertificateValidationError.expired)
+        
+        // Signed by server
+        let serverCert = try createMembershipCertificate(userId: userId, groupId: groupId, admin: true, issuer: .server, iat: Date().advanced(by: -3600.0), exp: Date().advanced(by: -10.0), signingKey: privateECDSAKey)
+        
+        XCTAssertThrowsSpecificError(try authManager.validateUserSignedMembershipCertificate(certificate: serverCert, userId: userId, groupId: groupId, admin: true, signerUserId: adminUserId, publicKey: publicKey), CertificateValidationError.expired)
+    }
+    
+    func testValidateCertificateIssuedInFuture() throws {
+        // Signed by user
+        let userCert = try createMembershipCertificate(userId: userId, groupId: groupId, admin: true, issuer: .user(adminUserId), iat: Date().advanced(by: 10.0), exp: Date().advanced(by: 3600.0), signingKey: privateECDSAKey)
+        
+        XCTAssertThrowsSpecificError(try authManager.validateUserSignedMembershipCertificate(certificate: userCert, userId: userId, groupId: groupId, admin: true, signerUserId: adminUserId, publicKey: publicKey), CertificateValidationError.issuedInFuture)
+        
+        // Signed by server
+        let serverCert = try createMembershipCertificate(userId: userId, groupId: groupId, admin: true, issuer: .server, iat: Date().advanced(by: 10.0), exp: Date().advanced(by: 3600.0), signingKey: privateECDSAKey)
+        
+        XCTAssertThrowsSpecificError(try authManager.validateUserSignedMembershipCertificate(certificate: serverCert, userId: userId, groupId: groupId, admin: true, signerUserId: adminUserId, publicKey: publicKey), CertificateValidationError.issuedInFuture)
+    }
+    
+    func testRemainingValidityTime() throws {
+        // Signed by user
+        let userCert = try createMembershipCertificate(userId: userId, groupId: groupId, admin: true, issuer: .user(adminUserId), iat: Date(), exp: Date().advanced(by: 3600.0), signingKey: privateECDSAKey)
+        
+        XCTAssertEqual(try authManager.remainingValidityTime(certificate: userCert), 3600.0, accuracy: 0.1)
+        
+        // Signed by server
+        let serverCert = try createMembershipCertificate(userId: userId, groupId: groupId, admin: true, issuer: .server, iat: Date(), exp: Date().advanced(by: 3600.0), signingKey: privateECDSAKey)
+        
+        XCTAssertEqual(try authManager.remainingValidityTime(certificate: serverCert), 3600.0, accuracy: 0.1)
+    }
+    
+    func testValidateCertificateInvalidSignature() throws {
+        // Signed by user
+        let userCert = try authManager.createUserSignedMembershipCertificate(userId: userId, groupId: groupId, admin: true, signerUserId: adminUserId, signerPrivateSigningKey: privateKey)
+        
+        XCTAssertThrowsSpecificError(try authManager.validateUserSignedMembershipCertificate(certificate: userCert, userId: userId, groupId: groupId, admin: true, signerUserId: randomUUID, publicKey: otherPublicKey), CertificateValidationError.invalidSignature)
+        
+        // Signed by server
+        let serverCert = try authManager.createServerSignedMembershipCertificate(userId: userId, groupId: groupId, admin: true, signingKey: privateECDSAKey)
+        
+        XCTAssertThrowsSpecificError(try authManager.validateServerSignedMembershipCertificate(certificate: serverCert, userId: userId, groupId: groupId, admin: true, publicKey: otherPublicKey), CertificateValidationError.invalidSignature)
+    }
+    
+    // MARK: AuthHeader
+    
+    func testAuthHeaderVerification() throws {
+        let authHeader = try authManager.generateAuthHeader(signingKey: privateKey, userId: userId)
+        XCTAssertTrue(authManager.verify(authHeader: authHeader, publicKey: publicKey))
+        
+        let nonce = Data([UInt8](repeating: 0, count: 16))
+        let claims = AuthHeaderClaims(iss: userId, iat: Date().advanced(by: -200), exp: Date().advanced(by: -120), nonce: nonce)
+        let manuallyAssembledAuthHeader = try createASN1Certificate(claims: claims, signingKey: privateECDSAKey)
+        
+        XCTAssertFalse(authManager.verify(authHeader: manuallyAssembledAuthHeader, publicKey: publicKey))
+    }
+    
+    func testAuthHeaderUserIdExtraction() throws {
+        let authHeader = try authManager.generateAuthHeader(signingKey: privateKey, userId: userId)
+        XCTAssertEqual(try authManager.claimedUserId(authHeader), userId)
+    }
+    
+    func testExpiredAuthHeader() throws {
+        let nonce = Data([UInt8](repeating: 0, count: 16))
+        let claims = AuthHeaderClaims(iss: userId, iat: Date().advanced(by: -200), exp: Date().advanced(by: -120), nonce: nonce)
+        let authHeader = try createASN1Certificate(claims: claims, signingKey: privateECDSAKey)
+        
+        XCTAssertFalse(authManager.verify(authHeader: authHeader, publicKey: publicKey))
+    }
+    
+    func testAuthHeaderIssuedInFuture() throws {
+        let nonce = Data([UInt8](repeating: 0, count: 16))
+        let claims = AuthHeaderClaims(iss: userId, iat: Date().advanced(by: 10), exp: Date().advanced(by: 200), nonce: nonce)
+        let authHeader = try createASN1Certificate(claims: claims, signingKey: privateECDSAKey)
+        
+        XCTAssertFalse(authManager.verify(authHeader: authHeader, publicKey: publicKey))
+    }
+    
+    func testAuthHeaderInvalidSignature() throws {
+        let nonce = Data([UInt8](repeating: 0, count: 16))
+        let claims = AuthHeaderClaims(iss: userId, iat: Date(), exp: Date().advanced(by: 200), nonce: nonce)
+        let authHeader = try createASN1Certificate(claims: claims, signingKey: privateECDSAKey)
+        
+        XCTAssertFalse(authManager.verify(authHeader: authHeader, publicKey: otherPublicKey))
+    }
+    
+    private func createMembershipCertificate(userId: UserId, groupId: GroupId, admin: Bool, issuer: MembershipClaims.Issuer, iat: Date, exp: Date, signingKey: ECDSAKey) throws -> Certificate {
+        let claims = MembershipClaims(jti: JWTId(), iss: issuer, sub: userId, iat: iat, exp: exp, groupId: groupId, admin: admin)
+        
+        return try createASN1Certificate(claims: claims, signingKey: signingKey)
+    }
+    
+    private func createASN1Certificate<Payload: JWTPayload>(claims: Payload, signingKey: ECDSAKey) throws -> Certificate {
+        let jwtSigner = JWTSigner.es512(key: signingKey)
+        let jwt = try jwtSigner.sign(claims)
+        return try jwtRSTojwtAsn1(jwt)
+    }
+}
+
+extension XCTestCase {
+    func XCTAssertThrowsSpecificError<E: Error & Equatable>(_ expression: @autoclosure () throws -> Void, _ expectedError: E, _ message: @autoclosure () -> String = "", file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertThrowsError(try expression(), message(), file: file, line: line) { error in
+            guard error as? E == expectedError else {
+                XCTFail("Unexpected error: \(error). Expected \(expectedError)")
+                return
+            }
+        }
+    }
+}
+
+struct TestLogHandler: LogHandler {
+    var metadata: Logger.Metadata = [:]
+    var logLevel: Logger.Level = .trace
+    let identifier: String
+    
+    init(identifier: String) {
+        self.identifier = identifier
+    }
+    
+    subscript(metadataKey metadataKey: String) -> Logger.Metadata.Value? {
+        get {
+            metadata[metadataKey]
+        }
+        set(newValue) {
+            metadata[metadataKey] = newValue
+        }
+    }
+    
+    func log(level: Logger.Level, message: Logger.Message, metadata: Logger.Metadata?, file: String, function: String, line: UInt) {
+        print("TEST log: \(level) \(message) \(file) \(function) \(line)")
+    }
+}
