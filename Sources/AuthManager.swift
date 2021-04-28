@@ -55,7 +55,6 @@ public class AuthManager {
         let claims: MembershipClaims
         do {
             claims = try signer.verify(jwt, as: MembershipClaims.self)
-            try claims.validateClaims()
         } catch JWTError.claimVerificationFailure(name: let name, reason: _) {
             switch name {
             case "exp": throw CertificateValidationError.expired
@@ -79,10 +78,7 @@ public class AuthManager {
     
     public func remainingValidityTime(certificate: Certificate) throws -> TimeInterval {
         let claims = try jwtPayload(certificate, as: MembershipClaims.self)
-        guard let exp = claims.exp else {
-            return 0
-        }
-        return exp.value.timeIntervalSince(Date())
+        return claims.exp.value.timeIntervalSince(Date())
     }
 
     // MARK: Auth signature
