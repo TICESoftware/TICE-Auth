@@ -98,10 +98,7 @@ public class AuthManager {
     }
 
     public func verify(authHeader: Certificate, publicKey: PublicKey) -> Bool {
-        do {
-            let claims = try jwtPayload(authHeader, as: AuthHeaderClaims.self)
-            try claims.verify()
-            
+        do {            
             let signer = try JWTSigner.es512(key: .public(pem: publicKey))
             let authHeaderRS = signatureType(of: authHeader) == .rs ? authHeader : try jwtAsn1TojwtRS(authHeader)
             _ = try signer.verify(authHeaderRS, as: AuthHeaderClaims.self)

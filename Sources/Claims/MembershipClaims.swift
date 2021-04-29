@@ -5,16 +5,16 @@
 import Foundation
 import JWTKit
 
-public struct MembershipClaims: JWTPayload {
-    public let jti: JWTId
-    public let iss: Issuer
-    public let sub: UserId
-    public let iat: IssuedAtClaim
-    public let exp: ExpirationClaim
-    public let groupId: GroupId
-    public let admin: Bool
+struct MembershipClaims: Claims {
+    let jti: JWTId
+    let iss: Issuer
+    let sub: UserId
+    let iat: IssuedAtClaim
+    let exp: ExpirationClaim
+    let groupId: GroupId
+    let admin: Bool
     
-    public init(jti: JWTId, iss: Issuer, sub: UserId, iat: Date, exp: Date, groupId: GroupId, admin: Bool) {
+    init(jti: JWTId, iss: Issuer, sub: UserId, iat: Date, exp: Date, groupId: GroupId, admin: Bool) {
         self.jti = jti
         self.iss = iss
         self.sub = sub
@@ -23,17 +23,12 @@ public struct MembershipClaims: JWTPayload {
         self.groupId = groupId
         self.admin = admin
     }
-    
-    public func verify(using signer: JWTSigner) throws {
-        try exp.verifyNotExpired(currentDate: Date().addingTimeInterval(-AuthManager.jwtValidationLeeway))
-        try iat.verifyIssuedInPast(currentDate: Date().addingTimeInterval(AuthManager.jwtValidationLeeway))
-    }
 
-    public enum Issuer: Codable, Equatable, CustomStringConvertible {
+    enum Issuer: Codable, Equatable, CustomStringConvertible {
         case server
         case user(UserId)
 
-        public var description: String {
+        var description: String {
             switch self {
             case .server:
                 return "server"
@@ -42,12 +37,12 @@ public struct MembershipClaims: JWTPayload {
             }
         }
 
-        public enum CodingKeys: String, CodingKey {
+        enum CodingKeys: String, CodingKey {
             case server
             case user
         }
 
-        public init(from decoder: Decoder) throws {
+        init(from decoder: Decoder) throws {
             let rawString = try decoder.singleValueContainer().decode(String.self)
             
             if rawString == "server" {
@@ -60,7 +55,7 @@ public struct MembershipClaims: JWTPayload {
             }
         }
 
-        public func encode(to encoder: Encoder) throws {
+        func encode(to encoder: Encoder) throws {
             var container = encoder.singleValueContainer()
             try container.encode(description)
         }
