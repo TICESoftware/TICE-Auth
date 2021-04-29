@@ -24,7 +24,7 @@ public func jwtAsn1TojwtRS(_ jwt: String) throws -> String {
     return "\(jwtComponents[0]).\(jwtComponents[1]).\(rsSignature)"
 }
 
-public func jwtPayload<Payload>(_ jwt: String, as payload: Payload.Type) throws -> Payload where Payload: JWTPayload {
+func jwtPayload<Payload>(_ jwt: String) throws -> Payload where Payload: Claims {
     let jwtComponents = jwt.components(separatedBy: ".")
     guard jwtComponents.count == 3, let payloadData = data(base64urlEncoded: jwtComponents[1]) else {
         throw JWTError.malformedToken
