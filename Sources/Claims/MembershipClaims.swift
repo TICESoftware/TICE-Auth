@@ -4,6 +4,7 @@
 
 import Foundation
 import JWTKit
+import Crypto
 
 struct MembershipClaims: Claims {
     let jti: JWTId
@@ -13,6 +14,14 @@ struct MembershipClaims: Claims {
     let exp: ExpirationClaim
     let groupId: GroupId
     let admin: Bool
+    
+    var hash: String {
+        var hasher = SHA256.init()
+        hasher.update(data: jti.uuidString.data(using: .utf8)!)
+        hasher.update(data: iss.description.data(using: .utf8)!)
+        let digest = hasher.finalize()
+        return digest.compactMap { String(format: "%02x", $0) }.joined()
+    }
     
     init(jti: JWTId, iss: Issuer, sub: UserId, iat: Date, exp: Date, groupId: GroupId, admin: Bool) {
         self.jti = jti

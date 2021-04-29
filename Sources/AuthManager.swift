@@ -69,6 +69,11 @@ public class AuthManager {
         }
     }
     
+    public func membershipClaimsHash(certificate: Certificate) throws -> String {
+        let claims: MembershipClaims = try jwtPayload(certificate)
+        return claims.hash
+    }
+    
     // MARK: Key signature
     
     public func createKeyCertificate(issuer: UserId, publicKey: PublicKey, signingKey: PrivateKey) throws -> Certificate {

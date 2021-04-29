@@ -1,6 +1,7 @@
 import XCTest
 import Logging
 import JWTKit
+import Crypto
 
 @testable import TICEAuth
 
@@ -185,6 +186,18 @@ Fc6LyAXYX5nxaq4rNjY=
         XCTAssertFalse(authManager.serverSignedMembershipCertificateRevocableBy(userId: adminUserId, certificate: serverCert, publicKey: otherPublicKey))
     }
     
+    func testMembershipClaimsHash() throws {
+        // Signed by user
+        let userCert = try createMembershipCertificate(jwtId: randomUUID, userId: userId, groupId: groupId, admin: true, issuer: .user(adminUserId), iat: Date(), exp: Date().advanced(by: 3600.0), signingKey: privateECDSAKey)
+        
+        XCTAssertEqual(try authManager.membershipClaimsHash(certificate: userCert), "d670431b68243ed82ce4bc056233c5be30647293a4e68d206cdfdf6e8a60c102")
+        
+        // Signed by server
+        let serverCert = try createMembershipCertificate(jwtId: randomUUID, userId: userId, groupId: groupId, admin: true, issuer: .server, iat: Date(), exp: Date().advanced(by: 3600.0), signingKey: privateECDSAKey)
+        
+        XCTAssertEqual(try authManager.membershipClaimsHash(certificate: serverCert), "9f2a994004b01312fc7a2a30bb571aaa9f867c8d911a7a659fcb303d50770192")
+    }
+    
     // MARK: Key certificate
     
     func testKeyCertificateValidation() throws {
@@ -287,8 +300,8 @@ Fc6LyAXYX5nxaq4rNjY=
         XCTAssertFalse(authManager.verify(authHeader: authHeader, publicKey: otherPublicKey))
     }
     
-    private func createMembershipCertificate(userId: UserId, groupId: GroupId, admin: Bool, issuer: MembershipClaims.Issuer, iat: Date, exp: Date, signingKey: ECDSAKey) throws -> Certificate {
-        let claims = MembershipClaims(jti: JWTId(), iss: issuer, sub: userId, iat: iat, exp: exp, groupId: groupId, admin: admin)
+    private func createMembershipCertificate(jwtId: JWTId = JWTId(), userId: UserId, groupId: GroupId, admin: Bool, issuer: MembershipClaims.Issuer, iat: Date, exp: Date, signingKey: ECDSAKey) throws -> Certificate {
+        let claims = MembershipClaims(jti: jwtId, iss: issuer, sub: userId, iat: iat, exp: exp, groupId: groupId, admin: admin)
         
         return try createASN1Certificate(claims: claims, signingKey: signingKey)
     }
