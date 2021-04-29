@@ -60,6 +60,15 @@ public class AuthManager {
         try remainingValidityTime(certificate: certificate, claimsType: MembershipClaims.self)
     }
     
+    public func serverSignedMembershipCertificateRevocableBy(userId: UserId, certificate: Certificate, publicKey: PublicKey) -> Bool {
+        do {
+            let claims: MembershipClaims = try extractAndVerifyClaims(certificate: certificate, publicKey: publicKey)
+            return claims.iss == .server && claims.sub == userId
+        } catch {
+            return false
+        }
+    }
+    
     // MARK: Key signature
     
     public func createKeyCertificate(issuer: UserId, publicKey: PublicKey, signingKey: PrivateKey) throws -> Certificate {

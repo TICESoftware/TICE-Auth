@@ -169,6 +169,22 @@ Fc6LyAXYX5nxaq4rNjY=
         XCTAssertThrowsSpecificError(try authManager.validateServerSignedMembershipCertificate(certificate: serverCert, userId: userId, groupId: groupId, admin: true, publicKey: otherPublicKey), CertificateValidationError.invalidSignature)
     }
     
+    func testRevocableBy() throws {
+        // Signed by user
+        let userCert = try createMembershipCertificate(userId: userId, groupId: groupId, admin: true, issuer: .user(adminUserId), iat: Date(), exp: Date().advanced(by: 3600.0), signingKey: privateECDSAKey)
+        
+        XCTAssertFalse(authManager.serverSignedMembershipCertificateRevocableBy(userId: adminUserId, certificate: userCert, publicKey: publicKey))
+        XCTAssertFalse(authManager.serverSignedMembershipCertificateRevocableBy(userId: randomUUID, certificate: userCert, publicKey: publicKey))
+        XCTAssertFalse(authManager.serverSignedMembershipCertificateRevocableBy(userId: adminUserId, certificate: userCert, publicKey: otherPublicKey))
+        
+        // Signed by server
+        let serverCert = try createMembershipCertificate(userId: userId, groupId: groupId, admin: true, issuer: .server, iat: Date(), exp: Date().advanced(by: 3600.0), signingKey: privateECDSAKey)
+        
+        XCTAssertTrue(authManager.serverSignedMembershipCertificateRevocableBy(userId: userId, certificate: serverCert, publicKey: publicKey))
+        XCTAssertFalse(authManager.serverSignedMembershipCertificateRevocableBy(userId: randomUUID, certificate: serverCert, publicKey: publicKey))
+        XCTAssertFalse(authManager.serverSignedMembershipCertificateRevocableBy(userId: adminUserId, certificate: serverCert, publicKey: otherPublicKey))
+    }
+    
     // MARK: Key certificate
     
     func testKeyCertificateValidation() throws {
