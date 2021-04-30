@@ -56,8 +56,8 @@ public class AuthManager {
         }
     }
     
-    public func membershipCertificateExpiresIn(certificate: Certificate) throws -> TimeInterval {
-        try remainingValidityTime(certificate: certificate, claimsType: MembershipClaims.self)
+    public func membershipCertificateExpirationDate(certificate: Certificate) throws -> Date {
+        try expirationDate(certificate: certificate, claimsType: MembershipClaims.self)
     }
     
     public func renewMembershipCertificate(certificate: Certificate, signingKey: ECDSAKey) throws -> Certificate {
@@ -106,8 +106,8 @@ public class AuthManager {
         }
     }
     
-    public func keyCertificateExpiresIn(certificate: Certificate) throws -> TimeInterval {
-        try remainingValidityTime(certificate: certificate, claimsType: KeyClaims.self)
+    public func keyCertificateExpirationDate(certificate: Certificate) throws -> Date {
+        try expirationDate(certificate: certificate, claimsType: KeyClaims.self)
     }
 
     // MARK: Auth signature
@@ -151,9 +151,9 @@ public class AuthManager {
         return try jwtRSTojwtAsn1(jwt)
     }
     
-    private func remainingValidityTime<T: Claims>(certificate: Certificate, claimsType: T.Type) throws -> TimeInterval {
+    private func expirationDate<T: Claims>(certificate: Certificate, claimsType: T.Type) throws -> Date {
         let claims: T = try jwtPayload(certificate)
-        return claims.exp.value.timeIntervalSince(Date())
+        return claims.exp.value
     }
     
     private func extractAndVerifyClaims<T: Claims>(certificate: Certificate, publicKey: PublicKey) throws -> T {
