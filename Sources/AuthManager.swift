@@ -60,6 +60,11 @@ public class AuthManager {
         try remainingValidityTime(certificate: certificate, claimsType: MembershipClaims.self)
     }
     
+    public func renewMembershipCertificate(certificate: Certificate, signingKey: ECDSAKey) throws -> Certificate {
+        let claims: MembershipClaims = try jwtPayload(certificate)
+        return try createServerSignedMembershipCertificate(jwtId: claims.jti, userId: claims.sub, groupId: claims.groupId, admin: claims.admin, signingKey: signingKey)
+    }
+    
     public func serverSignedMembershipCertificateRevocableBy(userId: UserId, certificate: Certificate, publicKey: PublicKey) -> Bool {
         do {
             let claims: MembershipClaims = try extractAndVerifyClaims(certificate: certificate, publicKey: publicKey)

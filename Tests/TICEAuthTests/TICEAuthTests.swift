@@ -170,6 +170,23 @@ Fc6LyAXYX5nxaq4rNjY=
         XCTAssertThrowsSpecificError(try authManager.validateServerSignedMembershipCertificate(certificate: serverCert, userId: userId, groupId: groupId, admin: true, publicKey: otherPublicKey), CertificateValidationError.invalidSignature)
     }
     
+    func testRenewMembershipCertificate() throws {
+        let serverCert = try createMembershipCertificate(jwtId: randomUUID, userId: userId, groupId: groupId, admin: true, issuer: .server, iat: Date(), exp: Date().advanced(by: 3600.0), signingKey: privateECDSAKey)
+        let renewedCert = try authManager.renewMembershipCertificate(certificate: serverCert, signingKey: privateECDSAKey)
+        
+        let membershipClaims: MembershipClaims = try jwtPayload(renewedCert)
+        
+        XCTAssertEqual(membershipClaims.jti, randomUUID)
+        XCTAssertEqual(membershipClaims.sub, userId)
+        XCTAssertEqual(membershipClaims.groupId, groupId)
+        XCTAssertTrue(membershipClaims.admin)
+        XCTAssertEqual(membershipClaims.iss, .server)
+        XCTAssertEqual(membershipClaims.iat.value.timeIntervalSince1970, Date().timeIntervalSince1970, accuracy: 0.1)
+        XCTAssertEqual(membershipClaims.exp.value.timeIntervalSince1970, Date().advanced(by: authManager.certificatesValidFor).timeIntervalSince1970, accuracy: 0.1)
+        
+        try authManager.validateServerSignedMembershipCertificate(certificate: renewedCert, userId: userId, groupId: groupId, admin: true, publicKey: publicKey)
+    }
+    
     func testRevocableBy() throws {
         // Signed by user
         let userCert = try createMembershipCertificate(userId: userId, groupId: groupId, admin: true, issuer: .user(adminUserId), iat: Date(), exp: Date().advanced(by: 3600.0), signingKey: privateECDSAKey)
