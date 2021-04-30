@@ -74,6 +74,16 @@ public class AuthManager {
         return claims.hash
     }
     
+    public func claimedGroupId(certificate: Certificate) throws -> GroupId {
+        let membershipClaims: MembershipClaims = try jwtPayload(certificate)
+        return membershipClaims.groupId
+    }
+    
+    public func claimedAdmin(certificate: Certificate) throws -> Bool {
+        let membershipClaims: MembershipClaims = try jwtPayload(certificate)
+        return membershipClaims.admin
+    }
+    
     // MARK: Key signature
     
     public func createKeyCertificate(issuer: UserId, publicKey: PublicKey, signingKey: PrivateKey) throws -> Certificate {

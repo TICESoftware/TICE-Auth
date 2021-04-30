@@ -198,6 +198,20 @@ Fc6LyAXYX5nxaq4rNjY=
         XCTAssertEqual(try authManager.membershipClaimsHash(certificate: serverCert), "9f2a994004b01312fc7a2a30bb571aaa9f867c8d911a7a659fcb303d50770192")
     }
     
+    func testMembershipClaimedGroupId() throws {
+        let cert = try createMembershipCertificate(userId: userId, groupId: groupId, admin: true, issuer: .server, iat: Date(), exp: Date().advanced(by: 3600.0), signingKey: privateECDSAKey)
+        
+        XCTAssertEqual(try authManager.claimedGroupId(certificate: cert), groupId)
+    }
+    
+    func testMembershipClaimedAdmin() throws {
+        let adminCert = try createMembershipCertificate(userId: userId, groupId: groupId, admin: true, issuer: .server, iat: Date(), exp: Date().advanced(by: 3600.0), signingKey: privateECDSAKey)
+        let nonAdminCert = try createMembershipCertificate(userId: userId, groupId: groupId, admin: false, issuer: .server, iat: Date(), exp: Date().advanced(by: 3600.0), signingKey: privateECDSAKey)
+        
+        XCTAssertTrue(try authManager.claimedAdmin(certificate: adminCert))
+        XCTAssertFalse(try authManager.claimedAdmin(certificate: nonAdminCert))
+    }
+    
     // MARK: Key certificate
     
     func testKeyCertificateValidation() throws {
