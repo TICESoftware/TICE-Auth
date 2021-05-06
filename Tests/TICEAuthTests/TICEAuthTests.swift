@@ -191,16 +191,16 @@ Fc6LyAXYX5nxaq4rNjY=
         // Signed by user
         let userCert = try createMembershipCertificate(userId: userId, groupId: groupId, admin: true, issuer: .user(adminUserId), iat: Date(), exp: Date().advanced(by: 3600.0), signingKey: privateECDSAKey)
         
-        XCTAssertFalse(authManager.serverSignedMembershipCertificateRevocableBy(userId: adminUserId, certificate: userCert, publicKey: publicKey))
-        XCTAssertFalse(authManager.serverSignedMembershipCertificateRevocableBy(userId: randomUUID, certificate: userCert, publicKey: publicKey))
-        XCTAssertFalse(authManager.serverSignedMembershipCertificateRevocableBy(userId: adminUserId, certificate: userCert, publicKey: otherPublicKey))
+        XCTAssertFalse(authManager.serverSignedMembershipCertificateRevocableBy(userId: adminUserId, certificate: userCert, publicKey: try .public(pem: publicKey)))
+        XCTAssertFalse(authManager.serverSignedMembershipCertificateRevocableBy(userId: randomUUID, certificate: userCert, publicKey: try .public(pem: publicKey)))
+        XCTAssertFalse(authManager.serverSignedMembershipCertificateRevocableBy(userId: adminUserId, certificate: userCert, publicKey: try .public(pem: otherPublicKey)))
         
         // Signed by server
         let serverCert = try createMembershipCertificate(userId: userId, groupId: groupId, admin: true, issuer: .server, iat: Date(), exp: Date().advanced(by: 3600.0), signingKey: privateECDSAKey)
         
-        XCTAssertTrue(authManager.serverSignedMembershipCertificateRevocableBy(userId: userId, certificate: serverCert, publicKey: publicKey))
-        XCTAssertFalse(authManager.serverSignedMembershipCertificateRevocableBy(userId: randomUUID, certificate: serverCert, publicKey: publicKey))
-        XCTAssertFalse(authManager.serverSignedMembershipCertificateRevocableBy(userId: adminUserId, certificate: serverCert, publicKey: otherPublicKey))
+        XCTAssertTrue(authManager.serverSignedMembershipCertificateRevocableBy(userId: userId, certificate: serverCert, publicKey: try .public(pem: publicKey)))
+        XCTAssertFalse(authManager.serverSignedMembershipCertificateRevocableBy(userId: randomUUID, certificate: serverCert, publicKey: try .public(pem: publicKey)))
+        XCTAssertFalse(authManager.serverSignedMembershipCertificateRevocableBy(userId: adminUserId, certificate: serverCert, publicKey: try .public(pem: otherPublicKey)))
     }
     
     func testMembershipClaimsHash() throws {

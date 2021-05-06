@@ -35,14 +35,22 @@ public class AuthManager {
     }
     
     public func validateUserSignedMembershipCertificate(certificate: Certificate, userId: UserId, groupId: GroupId, admin: Bool, issuerUserId: UserId, publicKey: PublicKey) throws {
+        try validate(certificate: certificate, userId: userId, groupId: groupId, admin: admin, issuer: .user(issuerUserId), publicKey: .public(pem: publicKey))
+    }
+    
+    public func validateUserSignedMembershipCertificate(certificate: Certificate, userId: UserId, groupId: GroupId, admin: Bool, issuerUserId: UserId, publicKey: ECDSAKey) throws {
         try validate(certificate: certificate, userId: userId, groupId: groupId, admin: admin, issuer: .user(issuerUserId), publicKey: publicKey)
     }
     
     public func validateServerSignedMembershipCertificate(certificate: Certificate, userId: UserId, groupId: GroupId, admin: Bool, publicKey: PublicKey) throws {
+        try validate(certificate: certificate, userId: userId, groupId: groupId, admin: admin, issuer: .server, publicKey: .public(pem: publicKey))
+    }
+    
+    public func validateServerSignedMembershipCertificate(certificate: Certificate, userId: UserId, groupId: GroupId, admin: Bool, publicKey: ECDSAKey) throws {
         try validate(certificate: certificate, userId: userId, groupId: groupId, admin: admin, issuer: .server, publicKey: publicKey)
     }
 
-    private func validate(certificate: Certificate, userId: UserId, groupId: GroupId, admin: Bool, issuer: MembershipClaims.Issuer, publicKey: PublicKey) throws {
+    private func validate(certificate: Certificate, userId: UserId, groupId: GroupId, admin: Bool, issuer: MembershipClaims.Issuer, publicKey: ECDSAKey) throws {
         let claims: MembershipClaims = try extractAndVerifyClaims(certificate: certificate, publicKey: publicKey)
         
         guard claims.groupId == groupId,
@@ -65,7 +73,7 @@ public class AuthManager {
         return try createServerSignedMembershipCertificate(jwtId: claims.jti, userId: claims.sub, groupId: claims.groupId, admin: claims.admin, signingKey: signingKey)
     }
     
-    public func serverSignedMembershipCertificateRevocableBy(userId: UserId, certificate: Certificate, publicKey: PublicKey) -> Bool {
+    public func serverSignedMembershipCertificateRevocableBy(userId: UserId, certificate: Certificate, publicKey: ECDSAKey) -> Bool {
         do {
             let claims: MembershipClaims = try extractAndVerifyClaims(certificate: certificate, publicKey: publicKey)
             return claims.iss == .server && claims.sub == userId
@@ -157,7 +165,11 @@ public class AuthManager {
     }
     
     private func extractAndVerifyClaims<T: Claims>(certificate: Certificate, publicKey: PublicKey) throws -> T {
-        let signer = try JWTSigner.es512(key: .public(pem: publicKey))
+        return try extractAndVerifyClaims(certificate: certificate, publicKey: .public(pem: publicKey))
+    }
+    
+    private func extractAndVerifyClaims<T: Claims>(certificate: Certificate, publicKey: ECDSAKey) throws -> T {
+        let signer = JWTSigner.es512(key: publicKey)
         let jwt = signatureType(of: certificate) == .rs ? certificate : try jwtAsn1TojwtRS(certificate)
         
         do {
