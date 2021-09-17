@@ -64,6 +64,10 @@ public class AuthManager {
         }
     }
     
+    public func membershipCertificateCreationDate(certificate: Certificate) throws -> Date {
+        try creationDate(certificate: certificate, claimsType: MembershipClaims.self)
+    }
+    
     public func membershipCertificateExpirationDate(certificate: Certificate) throws -> Date {
         try expirationDate(certificate: certificate, claimsType: MembershipClaims.self)
     }
@@ -157,6 +161,11 @@ public class AuthManager {
         let jwtSigner = JWTSigner.es512(key: signingKey)
         let jwt = try jwtSigner.sign(claims)
         return try jwtRSTojwtAsn1(jwt)
+    }
+    
+    private func creationDate<T: Claims>(certificate: Certificate, claimsType: T.Type) throws -> Date {
+        let claims: T = try jwtPayload(certificate)
+        return claims.iat.value
     }
     
     private func expirationDate<T: Claims>(certificate: Certificate, claimsType: T.Type) throws -> Date {

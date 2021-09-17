@@ -164,6 +164,20 @@ Fc6LyAXYX5nxaq4rNjY=
         XCTAssertEqual(try authManager.membershipCertificateExpirationDate(certificate: serverCert).timeIntervalSince1970, now.advanced(by: 3600.0).timeIntervalSince1970, accuracy: 0.1)
     }
     
+    func testMembershipCertificateCreationDate() throws {
+        let now = Date()
+        
+        // Signed by user
+        let userCert = try createMembershipCertificate(userId: userId, groupId: groupId, admin: true, issuer: .user(adminUserId), iat: now, exp: now.advanced(by: 3600.0), signingKey: privateECDSAKey)
+        
+        XCTAssertEqual(try authManager.membershipCertificateCreationDate(certificate: userCert).timeIntervalSince1970, now.timeIntervalSince1970, accuracy: 0.1)
+        
+        // Signed by server
+        let serverCert = try createMembershipCertificate(userId: userId, groupId: groupId, admin: true, issuer: .server, iat: now, exp: now.advanced(by: 3600.0), signingKey: privateECDSAKey)
+        
+        XCTAssertEqual(try authManager.membershipCertificateCreationDate(certificate: serverCert).timeIntervalSince1970, now.timeIntervalSince1970, accuracy: 0.1)
+    }
+    
     func testValidateMembershipCertificateInvalidSignature() throws {
         // Signed by user
         let userCert = try authManager.createUserSignedMembershipCertificate(userId: userId, groupId: groupId, admin: true, issuerUserId: adminUserId, signingKey: privateKey)
